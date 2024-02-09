@@ -7,7 +7,7 @@
     <title>Document</title>
 </head>
 <body>
-    <h2>Bi dricectional chat</h2>
+    <h2>SkiteChat</h2>
 
     <ul id="messages"></ul>
 
@@ -17,12 +17,36 @@
     </div>
 </body>
 <script>
+    WebSocket.prototype.emit = function (eventName, payload) {
+        this.send(JSON.stringify({ eventName, payload }));
+    }
+</script>
+<script>
     const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZWRfYXQiOjE3MDUzMTE4MzE4NTAsImV4cGlyZV9pbiI6ODY0MDAwMDAsImRhdGEiOnsidXNlcl9pZCI6IjFjNzNmYjA4LWU4OTgtNDkxOC05MzJiLWQyYzFjZjBmODkxOSIsImlkIjoiMWM3M2ZiMDgtZTg5OC00OTE4LTkzMmItZDJjMWNmMGY4OTE5IiwibmFtZSI6IkFwb2xsbyBDcmVlZCIsInRhZyI6ImNyZWVkMDEiLCJ3YWxsZXRfaWQiOiIzNzhmMjIwZC0xODFlLTQ5YTItODQzZS00OGE0YTdhNGM0ODQifSwiaWF0IjoxNzA1MzExODMxfQ.CNPDLdC8DWmRPTDQ9ujl5Jf17sEqMKKl5Qfcd_igz6w"
-    const ws = new WebSocket("ws://localhost:8383?token=");
+    const ws = new WebSocket("ws://localhost:8383?token=" + token);
 
-    ws.onopen = function (e) {
-        console.log("Connection to server opened");
-    };
+    ws.onerror = function (e) {
+        console.log(e);
+    }
+    ws.onclose = function (e) {
+        // {isTrusted: true, wasClean: true, code: 4000, reason: 'missing bearer token', type: 'close', …
+        console.log(e);
+    }
+
+
+    function sendMessage() {
+        setInterval(function () {
+            console.log("sending message event");
+
+            ws.emit("cl::sendMessage", {
+                to: "uid_123456",
+                type: "text",
+                body: "Hello, Skite"
+            })
+        }, 10000)
+    }
+    sendMessage();
+
 
     ws.onmessage = function (e) {
         var data = JSON.parse(e.data);
@@ -39,15 +63,8 @@
         messages.appendChild(message);
     };
 
-    function sendMessage() {
-        const message = document.querySelector("input").value;
-        ws.send(message);
 
-    }
 
-    (function focus() {
-        const textInput = document.querySelector("input");
-        textInput.focus();
-    })();
+
 </script>
 </html>
