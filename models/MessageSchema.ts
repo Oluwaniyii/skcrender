@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
 
 let messageSchema = new mongoose.Schema({
-  type: String,
-  text: String,
-  mediaType: String,
-  url: String,
+  type: String, // text | media
 });
 
-export default mongoose.model("blog", messageSchema);
+export default mongoose.model("message", messageSchema);

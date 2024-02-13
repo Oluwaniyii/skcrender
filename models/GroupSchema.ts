@@ -10,4 +10,4 @@ let groupSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("blog", groupSchema);
+export default mongoose.model("group", groupSchema);

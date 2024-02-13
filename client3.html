@@ -14,8 +14,8 @@
     <div>
         <textarea name="" id="messagebox" cols="30" rows="10" placeholder="type a message">Hello</textarea>
         <br />
-        <input type="text" id="receiver" placeholder="to:"" />
-        <button onclick=" sendMessage()">send</button>
+        <input type="text" id="receiver" placeholder="to: " />
+        <button onclick="sendMessage()">send</button>
     </div>
 </body>
 <script>
@@ -24,7 +24,8 @@
     }
 </script>
 <script>
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJheW9kZWxleW5peWlpQGdtYWlsLmNvbSJ9._Uk6BBT09sU6diPFTAA9PGmjm54WBsqkVGKMkyxakU0"
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMkBnbWFpbC5jb20ifQ._Z--2kH07a7QYVEskVUl14jQK1d-jVUyYqbjEVdkrD0"
+
 
     const ws = new WebSocket("ws://localhost:8383?token=" + token);
 
