@@ -30,7 +30,7 @@ const CORS_OPTIONS = {
 };
 
 app.set("env", process.env.NODE_ENV);
-// app.set("host", config.get("app.host"));
+app.set("host", HOST);
 app.set("port", config.get("app.port"));
 app.set("view engine", "ejs");
 

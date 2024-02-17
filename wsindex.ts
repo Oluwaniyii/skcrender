@@ -1,17 +1,24 @@
+import dotenv from "dotenv";
+import config from "config";
 import { v4 as uuidv4 } from "uuid";
 import WebSocket from "ws";
 import parseUrl from "parse-url";
 import jwt from "jsonwebtoken";
 import actionSendMessage from "./actions/sendMessage";
 
+dotenv.config();
+
 import { clients, clientsUsers } from "./clientManager";
 
-const wss = new WebSocket.Server({ port: 8383 }, () => {
-  console.log(`ws listening on ws://localhost:8383`);
+const WS_PORT: number = config.get("ws.port");
+const WS_HOST: string = config.get("ws.base");
+
+const wss = new WebSocket.Server({ port: WS_PORT }, () => {
+  console.log(`Websocket listening on ${WS_HOST}`);
 });
 
 wss.on("connection", async function (ws: WebSocket, req: any) {
-  const urlObject: any = parseUrl(req.url.replace("/", "ws://localhost:8383"));
+  const urlObject: any = parseUrl(req.url.replace("/", WS_HOST));
   const { token: bearerToken } = urlObject.query;
 
   if (!bearerToken) return ws.close(4000, "missing bearer token");
@@ -51,6 +58,7 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
     switch (eventName) {
       case "cl::sendMessage":
         actionSendMessage(payload, clients[socketId]);
+        break;
     }
   });
 });

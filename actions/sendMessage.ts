@@ -24,7 +24,13 @@ async function sendMessage(payload: any, client: client) {
     sender: userId,
     recipient: id,
     messageId: message._id,
+    meta: {
+      timestamp: new Date(),
+      isRead: false,
+    },
+    createdAt: performance.now(),
   });
+
   await message.save();
   await text.save();
   await chat.save();
@@ -35,19 +41,19 @@ async function sendMessage(payload: any, client: client) {
     sender: userId,
     recipient: id,
     body: body,
+    chatId: chat._id,
     messageId: message._id,
     meta: {
       timestamp: chat.meta.timestamp,
     },
   };
 
-  // check if user is online
+  // raise receiveMessage event to the recepient if online
   if (clientsUsers[id]) {
-    const client = clients[clientsUsers[id]];
-    const clientSocket = client.socket;
+    const recepientClient = clients[clientsUsers[id]];
+    const recepientSocket = recepientClient.socket;
 
-    // publish receiveMessage event to client
-    clientSocket.send(
+    recepientSocket.send(
       JSON.stringify({
         eventName: "se::receiveMessage",
         payload: receiveMessagePayload,
