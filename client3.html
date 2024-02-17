@@ -8,14 +8,17 @@
 </head>
 <body>
     <h2>SkiteChat</h2>
-
     <ul id="messages"></ul>
-
     <div>
+        <h2>Send A Chat</h2>
         <textarea name="" id="messagebox" cols="30" rows="10" placeholder="type a message">Hello</textarea>
         <br />
-        <input type="text" id="receiver" placeholder="to: " />
-        <button onclick="sendMessage()">send</button>
+        <input type="text" id="receiver" placeholder="to:" value="user2@gmail.com" />
+        <button onclick=" sendMessage()">send</button>
+
+        <h2>Delete A Chat</h2>
+        <input type="text" id="chatid" placeholder="id of chat you want to delete:" value="" />
+        <button onclick=" deleteMessage()">delete</button>
     </div>
 </body>
 <script>
@@ -25,15 +28,12 @@
 </script>
 <script>
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMkBnbWFpbC5jb20ifQ._Z--2kH07a7QYVEskVUl14jQK1d-jVUyYqbjEVdkrD0"
-
-
     const ws = new WebSocket("ws://localhost:8383?token=" + token);
 
     ws.onerror = function (e) {
         console.log(e);
     }
     ws.onclose = function (e) {
-        // {isTrusted: true, wasClean: true, code: 4000, reason: 'missing bearer token', type: 'close', …
         console.log(e);
     }
 
@@ -48,6 +48,15 @@
             body: message
         })
     }
+
+    function deleteMessage() {
+        const chatId = document.querySelector("#chatid").value
+
+        ws.emit("cl::deleteMessage", {
+            chatId: chatId
+        })
+    }
+
 
     ws.onmessage = function (e) {
         console.log(e);
