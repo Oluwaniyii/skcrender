@@ -11,9 +11,9 @@ export default {
     },
   },
   ws: {
-    host: process.env.HOST,
-    port: process.env.WS_PORT || 8383,
-    base: `${process.env.WS_PROTOCOL}://${process.env.HOST}:${process.env.PORT}`,
+    host: process.env.WS_HOST,
+    port: process.env.WS_PORT,
+    base: process.env.WS_BASE,
   },
   db: {
     mysql: {

@@ -3,7 +3,7 @@ import config from "config";
 import { v4 as uuidv4 } from "uuid";
 import WebSocket from "ws";
 import parseUrl from "parse-url";
-import jwt from "jsonwebtoken";
+import jwt from "./libraries/jwt";
 import actionSendMessage from "./actions/sendMessage";
 import deleteChat from "./actions/deleteChat";
 
@@ -12,25 +12,30 @@ dotenv.config();
 import { clients, clientsUsers } from "./clientManager";
 
 const WS_PORT: number = config.get("ws.port");
-const WS_HOST: string = config.get("ws.base");
+const WS_BASE: string = config.get("ws.base");
+
+console.log(WS_PORT);
+console.log(WS_BASE);
 
 const wss = new WebSocket.Server({ port: WS_PORT }, () => {
-  console.log(`Websocket listening on ${WS_HOST}`);
+  console.log(`Websocket listening on port ${WS_PORT}`);
 });
 
 wss.on("connection", async function (ws: WebSocket, req: any) {
-  const urlObject: any = parseUrl(req.url.replace("/", WS_HOST));
+  const urlObject: any = parseUrl(req.url.replace("/", WS_BASE));
   const { token: bearerToken } = urlObject.query;
 
   if (!bearerToken) return ws.close(4000, "missing bearer token");
 
   // authenticate
-  // const authenticatedUser: any = jwt.decode(bearerToken);
-  // if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
+  const authenticatedUser: any = await jwt.decode(bearerToken);
+  console.log(authenticatedUser);
+
+  if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
 
   // initialize and store connection
   const socketId = uuidv4();
-  const userId = "ayodeleyniyii@gmail.com";
+  const userId = authenticatedUser["sub"];
 
   const socketObject = {
     socketId: socketId,
