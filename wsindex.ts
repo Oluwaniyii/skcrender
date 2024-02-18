@@ -25,12 +25,12 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
   if (!bearerToken) return ws.close(4000, "missing bearer token");
 
   // authenticate
-  const authenticatedUser: any = jwt.decode(bearerToken);
-  if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
+  // const authenticatedUser: any = jwt.decode(bearerToken);
+  // if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
 
   // initialize and store connection
   const socketId = uuidv4();
-  const userId = authenticatedUser["sub"];
+  const userId = "ayodeleyniyii@gmail.com";
 
   const socketObject = {
     socketId: socketId,
