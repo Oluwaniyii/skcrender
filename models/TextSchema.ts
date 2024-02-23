@@ -5,4 +5,4 @@ let textSchema = new mongoose.Schema({
   text: { type: String, required: true },
 });
 
-export default mongoose.model("text", textSchema);
+export default mongoose.model("skc_text", textSchema);

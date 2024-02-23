@@ -9,4 +9,4 @@ let mediaSchema = new mongoose.Schema({
   text: String,
 });
 
-export default mongoose.model("media", mediaSchema);
+export default mongoose.model("skc_media", mediaSchema);

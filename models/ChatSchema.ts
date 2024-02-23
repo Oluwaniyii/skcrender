@@ -6,6 +6,7 @@ let chatSchema = new mongoose.Schema({
   sender: { type: String, required: true },
   recipient: { type: String, required: true },
   messageId: { type: String, required: true },
+  cId: { type: String, required: true },
   meta: {
     timestamp: { type: Date },
     isRead: { type: Boolean, default: false },
@@ -13,4 +14,4 @@ let chatSchema = new mongoose.Schema({
   createdAt: { type: Number },
 });
 
-export default mongoose.model("chat", chatSchema);
+export default mongoose.model("skc_chat", chatSchema);
