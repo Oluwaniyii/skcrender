@@ -4,4 +4,4 @@ let messageSchema = new mongoose.Schema({
   type: String, // text | media
 });
 
-export default mongoose.model("message", messageSchema);
+export default mongoose.model("skc_message", messageSchema);
