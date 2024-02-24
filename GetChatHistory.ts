@@ -31,7 +31,7 @@ async function GetChatHistory(
 
     if (msg) {
       rtc.push({
-        chatId: chat._id,
+        chatId: chat.cId,
         type: chat.type,
         sender: chat.sender,
         recipient: chat.recipient,
