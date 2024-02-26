@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
-let groupSchema = new mongoose.Schema({
+let classChannelSchema = new mongoose.Schema({
+  name: String,
+  owner: String,
   members: [String],
   admins: [String],
-  owner: String,
-  name: String,
   avatar: String,
   description: String,
   meta: {
@@ -12,4 +12,4 @@ let groupSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("skc_group", groupSchema);
+export default mongoose.model("skc_class_channel", classChannelSchema);

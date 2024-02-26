@@ -3,6 +3,8 @@ import AppException from "./AppException";
 import { domainError } from "./domainError";
 import jwt from "./libraries/jwt";
 import GetChatHistory from "./GetChatHistory";
+import { createClassChannel, getChannelDetails } from "./actions/classChannel";
+import { addChannelMember, removeChannelMember } from "./actions/channelMember";
 
 const router = require("express").Router();
 
@@ -14,32 +16,93 @@ router.get(
   "/chats/:userid",
   AuthProtectionMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
-    const { sub } = res.locals.authenticatedUser;
-    const { userid } = req.params;
-    const { limit, page } = req.query;
+    try {
+      const { sub } = res.locals.authenticatedUser;
+      const { userid } = req.params;
+      const { limit, page } = req.query;
 
-    const action: any = await GetChatHistory(
-      sub,
-      userid,
-      parseInt(`${limit}`) || 10,
-      parseInt(`${page}`) || 1
-    );
+      const action: any = await GetChatHistory(
+        sub,
+        userid,
+        parseInt(`${limit}`) || 10,
+        parseInt(`${page}`) || 1
+      );
 
-    const response: any = {};
-    const statusCode = 200;
-    const success = true;
-    const message = "ok";
-    const data: any = {};
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
 
-    data["chats"] = action.chats;
-    data["pagination"] = action.pagination;
+      data["chats"] = action.chats;
+      data["pagination"] = action.pagination;
 
-    response.success = success;
-    response.message = message;
-    response.data = data;
+      response.success = success;
+      response.message = message;
+      response.data = data;
 
-    res.status(statusCode);
-    res.json(response);
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/channels",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: owner } = res.locals.authenticatedUser;
+      const { name, description } = req.body;
+
+      const action: any = await createClassChannel(name, description, owner);
+
+      const response: any = {};
+      const statusCode = 201;
+      const success = true;
+      const message = "channel created successfully";
+      const data: any = {};
+
+      data["classChannel"] = action.channel;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/channels/:channelId",
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId } = req.params;
+      const action: any = await getChannelDetails(channelId);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["classChannel"] = action.channel;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
   }
 );
 
