@@ -1,7 +1,7 @@
 import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
 import TextSchema from "../models/TextSchema";
-import GroupSchema from "../models/GroupSchema";
+import ClassChannelSchema from "../models/ClassChannelSchema";
 import logger from "../utils/logger";
 
 import { clients, clientsUsers } from "../clientManager";
@@ -145,7 +145,7 @@ async function sendToGroup(payload: any, client: client) {
   // populate message to all active members excluding owner
 
   // filter active members
-  const group = await GroupSchema.findById(recipient);
+  const group = await ClassChannelSchema.findById(recipient);
   if (!group) return; //
 
   const activeMembers = group.members.filter(function (member) {

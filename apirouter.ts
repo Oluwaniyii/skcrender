@@ -106,6 +106,75 @@ router.get(
   }
 );
 
+router.post(
+  "/channels/:channelId/members",
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId } = req.params;
+      const { userEmail } = req.body;
+
+      const action = await addChannelMember(channelId, userEmail);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "member added";
+      const data: any = {};
+
+      data["channel"] = {};
+      data["channel"]["id"] = action.channelId;
+      data["channel"]["url"] = action.channelURL;
+
+      data["member"] = {};
+      data["member"]["total"] = action.membersCount;
+      data["member"]["list"] = action.members;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  "/channels/:channelId/members/:memberEmail",
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId, memberEmail } = req.params;
+
+      const action = await removeChannelMember(channelId, memberEmail);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "member removed";
+      const data: any = {};
+
+      data["channel"] = {};
+      data["channel"]["id"] = action.channelId;
+      data["channel"]["url"] = action.channelURL;
+
+      data["member"] = {};
+      data["member"]["total"] = action.membersCount;
+      data["member"]["list"] = action.members;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 async function AuthProtectionMiddleware(
   req: Request,
   res: Response,
