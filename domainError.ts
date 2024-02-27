@@ -30,7 +30,15 @@ export const domainError = {
     message: "invalid or missing header",
   },
 
-  // Authentic Errors
+  // Session Errors: You as a logged in entity, access, permissions, restrictions you bear(as defined in you session) => 1201+
+
+  AUTHORIZATION_ERROR: {
+    errorCode: 1201,
+    statusCode: 401,
+    message: "unauthorized",
+  },
+
+  // Authentication Errors
   INVALID_CREDENTIALS: {
     errorCode: 1101,
     statusCode: 401,
@@ -41,5 +49,30 @@ export const domainError = {
     errorCode: 1102,
     statusCode: 401,
     message: "invalid bearer token",
+  },
+
+  //domain errors
+  CREATE_CHANNEL_ERROR: {
+    errorCode: 1301,
+    statusCode: 400,
+    message: "cannot create channel",
+  },
+
+  ADD_CHANNEL_MEMBER_ERROR: {
+    errorCode: 1302,
+    statusCode: 400,
+    message: "cannot add member",
+  },
+
+  REMOVE_CHANNEL_MEMBER_ERROR: {
+    errorCode: 1303,
+    statusCode: 400,
+    message: "cannot remove member",
+  },
+
+  CHANNEL_MEMBER_ERROR: {
+    errorCode: 1304,
+    statusCode: 400,
+    message: "cannot remove member",
   },
 };
