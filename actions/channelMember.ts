@@ -14,7 +14,7 @@ export async function addChannelMember(channelId: string, userEmail: string) {
   const user = await UserSchema.findOne({ email: userEmail }, "_id email");
   if (!user)
     throw new AppException(
-      domainError.NOT_FOUND,
+      domainError.ADD_CHANNEL_MEMBER_ERROR,
       `user with email ${userEmail} does not exist`
     );
 
@@ -35,7 +35,8 @@ export async function addChannelMember(channelId: string, userEmail: string) {
 
 export async function removeChannelMember(
   channelId: string,
-  userEmail: string
+  userEmail: string,
+  authenticatedUser: string
 ) {
   const channel = await ClassChannelSchema.findById(
     channelId,
@@ -50,15 +51,21 @@ export async function removeChannelMember(
 
   const { _id: groupId, members, owner } = channel;
 
+  if (authenticatedUser !== owner)
+    throw new AppException(
+      domainError.AUTHORIZATION_ERROR,
+      `only creators and admins can remove a channel member`
+    );
+
   if (userEmail === owner)
     throw new AppException(
-      domainError.NOT_FOUND,
-      `you cannot remove group creator`
+      domainError.REMOVE_CHANNEL_MEMBER_ERROR,
+      `you cannot remove channel owner`
     );
 
   if (!members.includes(userEmail))
     throw new AppException(
-      domainError.NOT_FOUND,
+      domainError.CHANNEL_MEMBER_ERROR,
       `${userEmail} in not a member of group ${groupId}`
     );
 

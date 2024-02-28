@@ -5,6 +5,7 @@ import jwt from "./libraries/jwt";
 import GetChatHistory from "./GetChatHistory";
 import { createClassChannel, getChannelDetails } from "./actions/classChannel";
 import { addChannelMember, removeChannelMember } from "./actions/channelMember";
+import apiValidation from "./apiValidation";
 
 const router = require("express").Router();
 
@@ -55,7 +56,7 @@ router.post(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const { sub: owner } = res.locals.authenticatedUser;
-      const { name, description } = req.body;
+      const { name, description } = await apiValidation.CreateChannel(req.body);
 
       const action: any = await createClassChannel(name, description, owner);
 
@@ -111,7 +112,7 @@ router.post(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId } = req.params;
-      const { userEmail } = req.body;
+      const { userEmail } = await apiValidation.AddChannelMember(req.body);
 
       const action = await addChannelMember(channelId, userEmail);
 
@@ -143,11 +144,17 @@ router.post(
 
 router.delete(
   "/channels/:channelId/members/:memberEmail",
+  AuthProtectionMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId, memberEmail } = req.params;
+      const { sub: authenticatedUser } = res.locals.authenticatedUser;
 
-      const action = await removeChannelMember(channelId, memberEmail);
+      const action = await removeChannelMember(
+        channelId,
+        memberEmail,
+        authenticatedUser
+      );
 
       const response: any = {};
       const statusCode = 200;
