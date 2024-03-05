@@ -1,7 +1,8 @@
 import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
-import TextSchema from "../models/TextSchema";
+import MediaSchema from "../models/MediaSchema";
 import ClassChannelSchema from "../models/ClassChannelSchema";
+import { v2 as cloudinary } from "cloudinary";
 import logger from "../utils/logger";
 
 import { clients, clientsUsers } from "../clientManager";
@@ -12,7 +13,7 @@ type client = {
   socket: WebSocket;
 };
 
-async function sendMessage(payload: any, client: client) {
+async function sendFile(payload: any, client: client) {
   try {
     const messageGroup = payload.to;
     if (messageGroup === "individual") await sendToIndividual(payload, client);
@@ -22,7 +23,7 @@ async function sendMessage(payload: any, client: client) {
   } catch (e) {
     client.socket.send(
       JSON.stringify({
-        eventName: "dis::sendMessage",
+        eventName: "dis::sendAttachment",
         payload: {
           message: "message send failed",
           chatId: payload.chatId,
@@ -36,13 +37,31 @@ async function sendMessage(payload: any, client: client) {
 async function sendToIndividual(payload: any, client: client) {
   const { socketId, user, socket } = client;
   const userId = user.id;
-  const { to, recipient, type, body, chatId } = payload;
+  const { to, recipient, type, chatId, binary, meta } = payload;
 
-  // store message
-  const message: any = new MessageSchema({ type: "text" });
-  const text: any = new TextSchema({ messageId: message._id, text: body });
+  //upload to cloudinary
+  const result: any = await cloudinary.uploader.upload(binary, {
+    resource_type: "auto",
+    unique_filename: true,
+    overwrite: true,
+    filename_override: meta.name,
+  });
+  const { asset_id, public_id, secure_url, format, resource_type } = result;
+
+  // Store
+  const message: any = new MessageSchema({ type: "media" });
+  const media: any = new MediaSchema({
+    messageId: message._id,
+    mediaType: resource_type,
+    mediaExtension: format,
+    name: meta.name,
+    url: secure_url,
+    size: meta.size,
+    assetId: asset_id,
+    publicId: public_id,
+  });
   const chat: any = new ChatSchema({
-    type: "text",
+    type: "media",
     to: to,
     sender: userId,
     recipient: recipient,
@@ -56,19 +75,19 @@ async function sendToIndividual(payload: any, client: client) {
   });
 
   await message.save();
-  await text.save();
+  await media.save();
   await chat.save();
 
   // raise acknowledge message event to the sender
   client.socket.send(
     JSON.stringify({
-      eventName: "ack::sendMessage",
+      eventName: "ack::sendAttachment",
       payload: {
-        message: "message Sent",
+        message: "attachment Sent",
         to: to,
         recipient: recipient,
-        type: "text",
-        chatId: chatId,
+        type: type,
+        chatId: chat.cId,
         messageId: message._id,
         meta: {
           timestamp: chat.meta.timestamp,
@@ -78,13 +97,17 @@ async function sendToIndividual(payload: any, client: client) {
   );
 
   // prepare payload
-  const receiveMessagePayload = {
+  const receiveMediaPayload = {
     from: to,
     type: type,
     sender: userId,
     recipient: recipient,
-    body: body,
-    chatId: chatId,
+    name: meta.name,
+    size: meta.size,
+    mediaType: resource_type,
+    mediaExtension: format,
+    url: secure_url,
+    chatId: chat.cId,
     messageId: message._id,
     meta: {
       timestamp: chat.meta.timestamp,
@@ -98,8 +121,8 @@ async function sendToIndividual(payload: any, client: client) {
 
     recepientSocket.send(
       JSON.stringify({
-        eventName: "se::receiveMessage",
-        payload: receiveMessagePayload,
+        eventName: "se::receiveAttachment",
+        payload: receiveMediaPayload,
       })
     );
   }
@@ -108,7 +131,7 @@ async function sendToIndividual(payload: any, client: client) {
 async function sendToGroup(payload: any, client: client) {
   const { socketId, user, socket } = client;
   const userId = user.id;
-  const { to, recipient, type, body, chatId } = payload;
+  const { to, recipient, type, chatId, binary, meta } = payload;
 
   // Group has to exist
   // You have to be a member of the group
@@ -117,9 +140,9 @@ async function sendToGroup(payload: any, client: client) {
   if (!group)
     return client.socket.send(
       JSON.stringify({
-        eventName: "dis::sendMessage",
+        eventName: "dis::sendAttachment",
         payload: {
-          message: `channel ${recipient} does not exist`,
+          message: `channel ${recipient} does not exist send failed`,
           chatId: chatId,
         },
       })
@@ -128,7 +151,7 @@ async function sendToGroup(payload: any, client: client) {
   if (!group.members.includes(userId))
     return client.socket.send(
       JSON.stringify({
-        eventName: "dis::sendMessage",
+        eventName: "dis::sendAttachment",
         payload: {
           message: `you can't send or receive messages on group ${recipient} because you are not a member`,
           chatId: chatId,
@@ -136,11 +159,29 @@ async function sendToGroup(payload: any, client: client) {
       })
     );
 
-  // store message
-  const message: any = new MessageSchema({ type: "text" });
-  const text: any = new TextSchema({ messageId: message._id, text: body });
+  //upload to cloudinary
+  const result: any = await cloudinary.uploader.upload(binary, {
+    resource_type: "auto",
+    unique_filename: true,
+    overwrite: true,
+    filename_override: meta.name,
+  });
+  const { asset_id, public_id, secure_url, format, resource_type } = result;
+
+  // Store
+  const message: any = new MessageSchema({ type: "media" });
+  const media: any = new MediaSchema({
+    messageId: message._id,
+    mediaType: resource_type,
+    mediaExtension: format,
+    name: meta.name,
+    url: secure_url,
+    size: meta.size,
+    assetId: asset_id,
+    publicId: public_id,
+  });
   const chat: any = new ChatSchema({
-    type: "text",
+    type: "media",
     to: to,
     sender: userId,
     recipient: recipient,
@@ -154,19 +195,19 @@ async function sendToGroup(payload: any, client: client) {
   });
 
   await message.save();
-  await text.save();
+  await media.save();
   await chat.save();
 
   // raise acknowledge message event to the sender
   client.socket.send(
     JSON.stringify({
-      eventName: "ack::sendMessage",
+      eventName: "ack::sendAttachment",
       payload: {
-        message: "message Sent",
+        message: "attachment Sent",
         to: to,
         recipient: recipient,
-        type: "text",
-        chatId: chatId,
+        type: type,
+        chatId: chat.cId,
         messageId: message._id,
         meta: {
           timestamp: chat.meta.timestamp,
@@ -175,24 +216,29 @@ async function sendToGroup(payload: any, client: client) {
     })
   );
 
-  // populate message to all active members excluding owner
-  // filter group active members
-  const activeMembers = group.members.filter(function (member: any) {
-    return member !== userId && !!clientsUsers[member];
-  });
-
-  const receiveMessagePayload: any = {
-    type: type,
+  // prepare payload
+  const receiveMediaPayload = {
     from: to,
+    type: type,
     sender: userId,
     recipient: recipient,
-    body: body,
-    chatId: chatId,
+    name: meta.name,
+    size: meta.size,
+    mediaType: resource_type,
+    mediaExtension: format,
+    url: secure_url,
+    chatId: chat.cId,
     messageId: message._id,
     meta: {
       timestamp: chat.meta.timestamp,
     },
   };
+
+  // populate message to all active members excluding owner
+  // filter group active members
+  const activeMembers = group.members.filter(function (member: any) {
+    return member !== userId && !!clientsUsers[member];
+  });
 
   // send message to all active members
   activeMembers.forEach((member: any) => {
@@ -201,11 +247,10 @@ async function sendToGroup(payload: any, client: client) {
 
     recepientSocket.send(
       JSON.stringify({
-        eventName: "se::receiveMessage",
-        payload: receiveMessagePayload,
+        eventName: "se::receiveAttachment",
+        payload: receiveMediaPayload,
       })
     );
   });
 }
-
-export default sendMessage;
+export default sendFile;
