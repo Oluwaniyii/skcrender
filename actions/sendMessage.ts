@@ -25,6 +25,7 @@ async function sendMessage(payload: any, client: client) {
         eventName: "dis::sendMessage",
         payload: {
           message: "message send failed",
+          chatId: payload.chatId,
         },
       })
     );
@@ -64,7 +65,10 @@ async function sendToIndividual(payload: any, client: client) {
       eventName: "ack::sendMessage",
       payload: {
         message: "message Sent",
-        chatId: chat.cId,
+        to: to,
+        recipient: recipient,
+        type: "text",
+        chatId: chatId,
         messageId: message._id,
         meta: {
           timestamp: chat.meta.timestamp,
@@ -80,7 +84,7 @@ async function sendToIndividual(payload: any, client: client) {
     sender: userId,
     recipient: recipient,
     body: body,
-    chatId: chat.cId,
+    chatId: chatId,
     messageId: message._id,
     meta: {
       timestamp: chat.meta.timestamp,
@@ -105,6 +109,32 @@ async function sendToGroup(payload: any, client: client) {
   const { socketId, user, socket } = client;
   const userId = user.id;
   const { to, recipient, type, body, chatId } = payload;
+
+  // Group has to exist
+  // You have to be a member of the group
+  const group: any = await ClassChannelSchema.findById(recipient);
+
+  if (!group)
+    return client.socket.send(
+      JSON.stringify({
+        eventName: "dis::sendMessage",
+        payload: {
+          message: `channel ${recipient} does not exist`,
+          chatId: chatId,
+        },
+      })
+    );
+
+  if (!group.members.includes(userId))
+    return client.socket.send(
+      JSON.stringify({
+        eventName: "dis::sendMessage",
+        payload: {
+          message: `you can't send or receive messages on group ${recipient} because you are not a member`,
+          chatId: chatId,
+        },
+      })
+    );
 
   // store message
   const message: any = new MessageSchema({ type: "text" });
@@ -133,6 +163,9 @@ async function sendToGroup(payload: any, client: client) {
       eventName: "ack::sendMessage",
       payload: {
         message: "message Sent",
+        to: to,
+        recipient: recipient,
+        type: "text",
         chatId: chatId,
         messageId: message._id,
         meta: {
@@ -143,22 +176,18 @@ async function sendToGroup(payload: any, client: client) {
   );
 
   // populate message to all active members excluding owner
-
-  // filter active members
-  const group = await ClassChannelSchema.findById(recipient);
-  if (!group) return; //
-
-  const activeMembers = group.members.filter(function (member) {
+  // filter group active members
+  const activeMembers = group.members.filter(function (member: any) {
     return member !== userId && !!clientsUsers[member];
   });
 
   const receiveMessagePayload: any = {
-    from: to,
     type: type,
+    from: to,
     sender: userId,
+    recipient: recipient,
     body: body,
     chatId: chatId,
-    recipient: recipient,
     messageId: message._id,
     meta: {
       timestamp: chat.meta.timestamp,
@@ -166,7 +195,7 @@ async function sendToGroup(payload: any, client: client) {
   };
 
   // send message to all active members
-  activeMembers.forEach((member) => {
+  activeMembers.forEach((member: any) => {
     const recepientClient = clients[clientsUsers[member]];
     const recepientSocket = recepientClient.socket;
 

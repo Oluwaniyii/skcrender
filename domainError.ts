@@ -30,8 +30,6 @@ export const domainError = {
     message: "invalid or missing header",
   },
 
-  // Session Errors: You as a logged in entity, access, permissions, restrictions you bear(as defined in you session) => 1201+
-
   AUTHORIZATION_ERROR: {
     errorCode: 1201,
     statusCode: 401,
