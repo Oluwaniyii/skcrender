@@ -15,6 +15,7 @@ import {
   uncaughtExceptionHandler,
 } from "./utils/errorMiddleware";
 import { connect as redisConnect } from "./service-providers/redis";
+import { v2 as cloudinary } from "cloudinary";
 
 dotenv.config();
 
@@ -51,6 +52,11 @@ process.on("SIGTERM", () => process.exit(0));
 app.use(notFoundErrorHandler);
 app.use(errorDecorator);
 app.use(finalErrorHandler);
+
+// CLOUDINARY
+cloudinary.config({
+  secure: true,
+});
 
 db();
 redisConnect();

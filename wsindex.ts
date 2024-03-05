@@ -6,6 +6,7 @@ import parseUrl from "parse-url";
 import jwt from "./libraries/jwt";
 import actionSendMessage from "./actions/sendMessage";
 import deleteChat from "./actions/deleteChat";
+import sendAttachment from "./actions/sendAttachment";
 
 dotenv.config();
 
@@ -65,7 +66,10 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
       case "cl::sendMessage":
         actionSendMessage(payload, clients[socketId]);
         break;
-      case "cl::deleteMessage":
+      case "cl::sendAttachment":
+        sendAttachment(payload, clients[socketId]);
+        break;
+      case "cl::deleteChat":
         deleteChat(payload, clients[socketId]);
         break;
     }

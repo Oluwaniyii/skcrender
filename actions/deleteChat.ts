@@ -1,6 +1,7 @@
 import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
 import TextSchema from "../models/TextSchema";
+import MediaSchema from "../models/MediaSchema";
 import logger from "../utils/logger";
 
 import { clients, clientsUsers } from "../clientManager";
@@ -20,7 +21,6 @@ async function deleteChat(payload: any, client: client) {
     const chat: any = await ChatSchema.findById(chatId);
 
     if (userId === chat.sender) {
-      await TextSchema.findOneAndDelete({ messageId: chat.messageId });
       await MessageSchema.findByIdAndDelete(chat.messageId);
       await ChatSchema.findByIdAndDelete(chatId);
 
@@ -31,7 +31,7 @@ async function deleteChat(payload: any, client: client) {
       // raise acknowledge deleteChat event to the user
       client.socket.send(
         JSON.stringify({
-          eventName: "ack::deleteMessage",
+          eventName: "ack::deleteChat",
           payload: {
             message: "Chat deleted",
             chatId: chat._id,
@@ -54,9 +54,10 @@ async function deleteChat(payload: any, client: client) {
     } else {
       client.socket.send(
         JSON.stringify({
-          eventName: "dis::deleteMessage",
+          eventName: "dis::deleteChat",
           payload: {
             message: "can not delete chat, you are not the sender",
+            chatId: chatId,
           },
         })
       );
@@ -64,9 +65,10 @@ async function deleteChat(payload: any, client: client) {
   } catch (e) {
     client.socket.send(
       JSON.stringify({
-        eventName: "dis::deleteMessage",
+        eventName: "dis::deleteChat",
         payload: {
           message: "can not delete chat at the moment",
+          chatId: payload.chatId,
         },
       })
     );
