@@ -25,8 +25,7 @@ async function deleteChat(payload: any, client: client) {
       await ChatSchema.findByIdAndDelete(chatId);
 
       const recieveDeleteChatPayload = {
-        from: userId,
-        to: chat.recipient,
+        sender: userId,
         chatId: chat._id,
       };
 
@@ -36,7 +35,7 @@ async function deleteChat(payload: any, client: client) {
           eventName: "ack::deleteChat",
           payload: {
             message: "Chat deleted",
-            to: chat.recipient,
+            recipient: chat.recipient,
             chatId: chat._id,
           },
         })
