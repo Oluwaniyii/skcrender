@@ -93,10 +93,10 @@ async function sendToIndividual(payload: any, client: client) {
 
   // raise receiveMessage event to the recipient if online
   if (clientsUsers[recipient]) {
-    const recepientClient = clients[clientsUsers[recipient]];
-    const recepientSocket = recepientClient.socket;
+    const recipientClient = clients[clientsUsers[recipient]];
+    const recipientSocket = recipientClient.socket;
 
-    recepientSocket.send(
+    recipientSocket.send(
       JSON.stringify({
         eventName: "se::receiveMessage",
         payload: receiveMessagePayload,
@@ -196,10 +196,10 @@ async function sendToGroup(payload: any, client: client) {
 
   // send message to all active members
   activeMembers.forEach((member: any) => {
-    const recepientClient = clients[clientsUsers[member]];
-    const recepientSocket = recepientClient.socket;
+    const recipientClient = clients[clientsUsers[member]];
+    const recipientSocket = recipientClient.socket;
 
-    recepientSocket.send(
+    recipientSocket.send(
       JSON.stringify({
         eventName: "se::receiveMessage",
         payload: receiveMessagePayload,

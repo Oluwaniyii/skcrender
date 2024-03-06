@@ -1,5 +1,6 @@
 import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
+import ClassChannelSchema from "../models/ClassChannelSchema";
 import TextSchema from "../models/TextSchema";
 import MediaSchema from "../models/MediaSchema";
 import logger from "../utils/logger";
@@ -21,10 +22,11 @@ async function deleteChat(payload: any, client: client) {
     const chat: any = await ChatSchema.findById(chatId);
 
     if (userId === chat.sender) {
-      await MessageSchema.findByIdAndDelete(chat.messageId);
       await ChatSchema.findByIdAndDelete(chatId);
 
       const recieveDeleteChatPayload = {
+        from: userId,
+        to: chat.recipient,
         chatId: chat._id,
       };
 
@@ -34,22 +36,42 @@ async function deleteChat(payload: any, client: client) {
           eventName: "ack::deleteChat",
           payload: {
             message: "Chat deleted",
+            to: chat.recipient,
             chatId: chat._id,
           },
         })
       );
 
-      // raise deleteChat event to the other user
-      if (clientsUsers[chat.recipient]) {
-        const recepientClient = clients[clientsUsers[chat.recipient]];
-        const recepientSocket = recepientClient.socket;
+      // raise deleteChat event to the other users
+      if (chat.to === "group") {
+        const group: any = await ClassChannelSchema.findById(chat.recipient);
+        const activeMembers = group.members.filter(function (member: any) {
+          return member !== userId && !!clientsUsers[member];
+        });
 
-        recepientSocket.send(
-          JSON.stringify({
-            eventName: "se::receiveDeleteChat",
-            payload: recieveDeleteChatPayload,
-          })
-        );
+        activeMembers.forEach((member: any) => {
+          const recipientClient = clients[clientsUsers[member]];
+          const recipientSocket = recipientClient.socket;
+
+          recipientSocket.send(
+            JSON.stringify({
+              eventName: "se::receiveDeleteChat",
+              payload: recieveDeleteChatPayload,
+            })
+          );
+        });
+      } else {
+        if (clientsUsers[chat.recipient]) {
+          const recipientClient = clients[clientsUsers[chat.recipient]];
+          const recipientSocket = recipientClient.socket;
+
+          recipientSocket.send(
+            JSON.stringify({
+              eventName: "se::receiveDeleteChat",
+              payload: recieveDeleteChatPayload,
+            })
+          );
+        }
       }
     } else {
       client.socket.send(
