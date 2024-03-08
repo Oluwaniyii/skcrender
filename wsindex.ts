@@ -7,10 +7,11 @@ import jwt from "./libraries/jwt";
 import actionSendMessage from "./actions/sendMessage";
 import deleteChat from "./actions/deleteChat";
 import sendAttachment from "./actions/sendAttachment";
+import Usermodel from "./models/Usermodel";
 
 dotenv.config();
 
-import { clients, clientsUsers } from "./clientManager";
+import { clients, clientsUsers, clientsUsersId } from "./clientManager";
 
 const WS_PORT: number = config.get("ws.port");
 const WS_BASE: string = config.get("ws.base");
@@ -30,30 +31,37 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
 
   // authenticate
   const authenticatedUser: any = await jwt.decode(bearerToken);
-  console.log(authenticatedUser);
 
   if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
 
   // initialize and store connection
   const socketId = uuidv4();
-  const userId = authenticatedUser["sub"];
+  const userEmail = authenticatedUser["sub"];
+
+  const usd: any = await Usermodel.findOne({ email: userEmail }, "_id email");
+  if (!usd) return ws.close(4000, "cannot sign you in");
+  const uid = usd._id.toString();
 
   const socketObject = {
     socketId: socketId,
-    user: { id: userId },
+    user: { id: userEmail, uid: uid },
     socket: ws,
   };
   clients[socketId] = socketObject;
-  clientsUsers[userId] = socketId; // map user id to socket id for faster search through
+  clientsUsers[userEmail] = socketId; // map user email to socket id for faster search through
+  clientsUsersId[uid] = socketId; // map user id to socket id for faster search through
+
   console.log("client connected. socketId: " + socketId);
   console.log(clientsUsers);
+  console.log(clientsUsersId);
 
   // close connection
   ws.on("close", function (...args: any[]) {
     console.log("Received close event from client " + socketId);
 
     if (clients[socketId]) delete clients[socketId];
-    if (clientsUsers[userId]) delete clientsUsers[userId];
+    if (clientsUsers[userEmail]) delete clientsUsers[userEmail];
+    if (clientsUsersId[uid]) delete clientsUsersId[uid];
     ws.close();
   });
 
