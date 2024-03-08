@@ -2,9 +2,11 @@ import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
 import TextSchema from "../models/TextSchema";
 import ClassChannelSchema from "../models/ClassChannelSchema";
+import ClassSchema from "../models/ClassSchema";
+import ClassMembersSchema from "../models/ClassMembersSchema";
 import logger from "../utils/logger";
 
-import { clients, clientsUsers } from "../clientManager";
+import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
 type client = {
   socketId: string;
@@ -107,13 +109,12 @@ async function sendToIndividual(payload: any, client: client) {
 
 async function sendToGroup(payload: any, client: client) {
   const { socketId, user, socket } = client;
-  const userId = user.id;
+  const userId = user.uid;
   const { to, recipient, type, body, chatId } = payload;
 
   // Group has to exist
   // You have to be a member of the group
-  const group: any = await ClassChannelSchema.findById(recipient);
-
+  const group: any = await ClassSchema.findById(recipient, "_id");
   if (!group)
     return client.socket.send(
       JSON.stringify({
@@ -125,7 +126,14 @@ async function sendToGroup(payload: any, client: client) {
       })
     );
 
-  if (!group.members.includes(userId))
+  const members = await ClassMembersSchema.find(
+    { class_id: recipient },
+    "class_id member_uid"
+  );
+  let membersIds: any[] = [];
+  members.forEach((member) => membersIds.push(member.member_uid));
+
+  if (!membersIds.includes(userId))
     return client.socket.send(
       JSON.stringify({
         eventName: "dis::sendMessage",
@@ -177,8 +185,8 @@ async function sendToGroup(payload: any, client: client) {
 
   // populate message to all active members excluding owner
   // filter group active members
-  const activeMembers = group.members.filter(function (member: any) {
-    return member !== userId && !!clientsUsers[member];
+  const activeMembers = membersIds.filter(function (member: any) {
+    return member !== userId && !!clientsUsersId[member];
   });
 
   const receiveMessagePayload: any = {
@@ -196,7 +204,7 @@ async function sendToGroup(payload: any, client: client) {
 
   // send message to all active members
   activeMembers.forEach((member: any) => {
-    const recipientClient = clients[clientsUsers[member]];
+    const recipientClient = clients[clientsUsersId[member]];
     const recipientSocket = recipientClient.socket;
 
     recipientSocket.send(

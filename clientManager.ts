@@ -6,3 +6,4 @@ type client = {
 
 export let clients: any = {};
 export let clientsUsers: any = {};
+export let clientsUsersId: any = {};

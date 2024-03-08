@@ -1,10 +1,12 @@
 import MessageSchema from "./models/MessageSchema";
 import ChatSchema from "./models/ChatSchema";
 import TextSchema from "./models/TextSchema";
-import ClassChannelSchema from "./models/ClassChannelSchema";
+import ClassSchema from "./models/ClassSchema";
+import ClassMembersSchema from "./models/ClassMembersSchema";
 import AppException from "./AppException";
 import { domainError } from "./domainError";
 import MediaSchema from "./models/MediaSchema";
+import Usermodel from "./models/Usermodel";
 
 async function GetChatHistory(
   userEmail: string,
@@ -28,7 +30,7 @@ async function GetGroupHistory(
   const rtc: Array<any> = [];
   const pagination: any = {};
 
-  const channel = await ClassChannelSchema.findById(convoWith, "_id members");
+  const channel = await ClassSchema.findById(convoWith, "_id");
 
   if (!channel)
     throw new AppException(
@@ -36,12 +38,27 @@ async function GetGroupHistory(
       `channel ${convoWith} no longer exist`
     );
 
-  if (!channel.members.includes(userEmail))
+  const members = await ClassMembersSchema.find(
+    { class_id: convoWith },
+    "class_id member_uid"
+  );
+  let membersIds: any[] = [];
+  members.forEach((member) => membersIds.push(member.member_uid));
+
+  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
+  if (!user)
     throw new AppException(
       domainError.CHANNEL_MEMBER_ERROR,
       `you can't send or receive messages on group ${convoWith} because you are not a member`
     );
 
+  if (!membersIds.includes(user._id.toString()))
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `you can't send or receive messages on group ${convoWith} because you are not a member`
+    );
+
+  // fetch chat
   const query = { recipient: convoWith };
   const chats: Array<any> = await ChatSchema.find(query)
     .sort({ "meta.timestamp": "desc" })
