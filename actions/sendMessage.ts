@@ -114,7 +114,7 @@ async function sendToGroup(payload: any, client: client) {
 
   // Group has to exist
   // You have to be a member of the group
-  const group: any = await ClassSchema.findById(recipient, "_id");
+  const group: any = await ClassSchema.findById(recipient, "_id creator");
   if (!group)
     return client.socket.send(
       JSON.stringify({
@@ -130,7 +130,7 @@ async function sendToGroup(payload: any, client: client) {
     { class_id: recipient },
     "class_id member_uid"
   );
-  let membersIds: any[] = [];
+  let membersIds: any[] = [group.creator];
   members.forEach((member) => membersIds.push(member.member_uid));
 
   if (!membersIds.includes(userId))
