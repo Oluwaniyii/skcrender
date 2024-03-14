@@ -5,6 +5,8 @@ import jwt from "./libraries/jwt";
 import GetChatHistory from "./GetChatHistory";
 import { createClassChannel, getChannelDetails } from "./actions/classChannel";
 import { addChannelMember, removeChannelMember } from "./actions/channelMember";
+import { addBookmark, getBookmarks } from "./actions/bookmark";
+import { addPin, getPins } from "./actions/pin";
 import apiValidation from "./apiValidation";
 
 const router = require("express").Router();
@@ -37,6 +39,125 @@ router.get(
 
       data["chats"] = action.chats;
       data["pagination"] = action.pagination;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/bookmarks",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const action: any = await getBookmarks(userEmail);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["bookmarks"] = action.chats;
+      data["bookmarksCount"] = action.bookmarksCount;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/bookmarks",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const { chatId } = await apiValidation.AddBookmark(req.body);
+
+      const action: any = await addBookmark(userEmail, chatId);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "bookmark added";
+      const data: any = {};
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/class/:classId/pins",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const { classId } = req.params;
+
+      const action: any = await getPins(userEmail, classId);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["pins"] = action.chats;
+      data["pinsCount"] = action.pinsCount;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/class/:classId/pins",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const { classId } = req.params;
+      const { chatId } = await apiValidation.PinChat(req.body);
+
+      const action: any = await addPin(userEmail, classId, chatId);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "chat pinned";
+      const data: any = {};
+
+      data["pinsCount"] = action.pinsCount;
 
       response.success = success;
       response.message = message;
