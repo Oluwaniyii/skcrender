@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import "./wsindex";
+// import "./wsindex";
 import "./apiindex";
