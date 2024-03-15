@@ -58,7 +58,7 @@ async function sendToIndividual(payload: any, client: client) {
   const message: any = new MessageSchema({ type: "media" });
   const media: any = new MediaSchema({
     messageId: message._id,
-    mediaType: mex[1],
+    mediaType: mex[0],
     mediaExtension: cex,
     name: meta.name,
     url: secure_url,
@@ -110,7 +110,7 @@ async function sendToIndividual(payload: any, client: client) {
     recipient: recipient,
     name: meta.name,
     size: meta.size,
-    mediaType: mex[1],
+    mediaType: mex[0],
     mediaExtension: cex,
     url: secure_url,
     chatId: chat.cId,
@@ -188,7 +188,7 @@ async function sendToGroup(payload: any, client: client) {
   const message: any = new MessageSchema({ type: "media" });
   const media: any = new MediaSchema({
     messageId: message._id,
-    mediaType: mex[1],
+    mediaType: mex[0],
     mediaExtension: cex,
     name: meta.name,
     url: secure_url,
@@ -240,7 +240,7 @@ async function sendToGroup(payload: any, client: client) {
     recipient: recipient,
     name: meta.name,
     size: meta.size,
-    mediaType: mex[1],
+    mediaType: mex[0],
     mediaExtension: cex,
     url: secure_url,
     chatId: chat.cId,
