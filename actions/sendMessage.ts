@@ -5,6 +5,7 @@ import ClassChannelSchema from "../models/ClassChannelSchema";
 import ClassSchema from "../models/ClassSchema";
 import ClassMembersSchema from "../models/ClassMembersSchema";
 import logger from "../utils/logger";
+import Usermodel from "../models/Usermodel";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
@@ -189,10 +190,19 @@ async function sendToGroup(payload: any, client: client) {
     return member !== userId && !!clientsUsersId[member];
   });
 
+  const senderInfo: any = await Usermodel.findById(
+    userId,
+    "firstName lastName avatar"
+  );
+
   const receiveMessagePayload: any = {
     type: type,
     from: to,
     sender: userId,
+    senderInfo: {
+      name: `${senderInfo?.firstName} ${senderInfo?.lastName}`,
+      avatar: senderInfo?.avatar,
+    },
     recipient: recipient,
     body: body,
     chatId: chatId,
