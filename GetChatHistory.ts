@@ -73,8 +73,6 @@ async function GetGroupHistory(
       chat.sender,
       "_id firstName lastName avatar"
     );
-    console.log(chat.sender);
-    console.log(senderDetails);
 
     let senderInfo = {
       id: senderDetails?._id.toString(),
