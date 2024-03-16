@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 import logger from "../utils/logger";
 import ClassSchema from "../models/ClassSchema";
 import ClassMembersSchema from "../models/ClassMembersSchema";
+import Usermodel from "../models/Usermodel";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
@@ -232,11 +233,20 @@ async function sendToGroup(payload: any, client: client) {
     })
   );
 
+  const senderInfo: any = await Usermodel.findById(
+    userId,
+    "firstName lastName avatar"
+  );
+
   // prepare payload
   const receiveMediaPayload = {
-    from: to,
     type: type,
+    from: to,
     sender: userId,
+    senderInfo: {
+      name: `${senderInfo?.firstName} ${senderInfo?.lastName}`,
+      avatar: senderInfo?.avatar,
+    },
     recipient: recipient,
     name: meta.name,
     size: meta.size,
