@@ -69,6 +69,18 @@ async function GetGroupHistory(
   for (let i = 0; i < sortedChats.length; i++) {
     let chat = sortedChats[i];
     let msg: any = await retrieveChatMessage(chat.messageId);
+    let senderDetails: any = await Usermodel.findById(
+      chat.sender,
+      "_id firstName lastName avatar"
+    );
+    console.log(chat.sender);
+    console.log(senderDetails);
+
+    let senderInfo = {
+      id: senderDetails?._id.toString(),
+      name: `${senderDetails?.firstName} ${senderDetails?.lastName}`,
+      avatar: senderDetails?.avatar,
+    };
 
     if (msg) {
       if (chat.type === "text")
@@ -76,6 +88,7 @@ async function GetGroupHistory(
           chatId: chat.cId,
           type: chat.type,
           sender: chat.sender,
+          senderInfo: senderInfo,
           recipient: chat.recipient,
           messageId: chat.messageId,
           text: msg.text,
@@ -86,6 +99,7 @@ async function GetGroupHistory(
           chatId: chat.cId,
           type: chat.type,
           sender: chat.sender,
+          senderInfo: senderInfo,
           recipient: chat.recipient,
           messageId: chat.messageId,
           name: msg.name,
