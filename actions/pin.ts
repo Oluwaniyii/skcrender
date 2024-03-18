@@ -4,53 +4,154 @@ import { domainError } from "../domainError";
 import ChatSchema from "../models/ChatSchema";
 import ClassSchema from "../models/ClassSchema";
 import PinSchema from "../models/PinSchema";
-import BookmarkSchema from "../models/BookmarkSchema";
 import ClassMembersSchema from "../models/ClassMembersSchema";
 import TextSchema from "../models/TextSchema";
 import MediaSchema from "../models/MediaSchema";
 import MessageSchema from "../models/MessageSchema";
+import logger from "../utils/logger";
 
-export async function addPin(
-  userEmail: string,
-  classId: string,
-  chatId: string
-) {
-  const user = await Usermodel.findOne({ email: userEmail }, "_id");
-  if (!user)
-    throw new AppException(domainError.NOT_FOUND, `something went wrong`);
+import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
-  const group: any = await ClassSchema.findById(classId, "_id creator");
-  if (!group)
-    throw new AppException(
-      domainError.NOT_FOUND,
-      `you cannot pin chat because group no longer exist`
-    );
+type client = {
+  socketId: string;
+  user: any;
+  socket: WebSocket;
+};
 
-  const chat: any = await ChatSchema.findOne({ cId: chatId }, "cId");
-  if (!chat)
-    throw new AppException(domainError.NOT_FOUND, `chat does not exist`);
+export async function addPin(payload: any, client: client) {
+  try {
+    const { classId, chatId } = payload;
+    const { id: userEmail, uid: userId } = client.user;
 
-  if (user._id.toString() !== group.creator)
-    throw new AppException(
-      domainError.NOT_FOUND,
-      `you cannot pin this chat because you are not the group owner`
-    );
+    const user = await Usermodel.findOne({ email: userEmail }, "_id");
+    if (!user)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::addPin",
+          payload: {
+            message: "something went wrong",
+            chatId: chatId,
+          },
+        })
+      );
 
-  let pin = await PinSchema.findOne({ class_id: classId });
-  if (pin) {
-    if (!pin.pins.includes(chatId)) {
-      pin.pins.push(chatId);
+    const group: any = await ClassSchema.findById(classId, "_id creator");
+    if (!group)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::addPin",
+          payload: {
+            message: "you cannot pin chat because group no longer exist",
+            chatId: chatId,
+          },
+        })
+      );
+
+    const chat: any = await ChatSchema.findOne({ cId: chatId }, "cId");
+    if (!chat)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::addPin",
+          payload: {
+            message: "chat does not exist",
+            chatId: chatId,
+          },
+        })
+      );
+
+    if (user._id.toString() !== group.creator)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::addPin",
+          payload: {
+            message:
+              "you cannot pin this chat because you are not the group owner",
+            chatId: chatId,
+          },
+        })
+      );
+
+    let pin: any = await PinSchema.findOne({ class_id: classId });
+    let pinsCount: number = 0;
+
+    if (pin) {
+      if (!pin.pins.includes(chatId)) {
+        pin.pins.push(chatId);
+        await pin.save();
+      } else {
+        return client.socket.send(
+          JSON.stringify({
+            eventName: "ack::addPin",
+            payload: {
+              message: "chat already pinned",
+              chatId: chatId,
+              pinsCount: pin.pins.length,
+            },
+          })
+        );
+      }
+    } else {
+      pin = new PinSchema({ class_id: classId, pins: [chatId] });
       await pin.save();
     }
-  } else {
-    pin = new PinSchema({
-      class_id: classId,
-      pins: [chatId],
-    });
     await pin.save();
-  }
 
-  return { pinsCount: pin.pins.length };
+    pinsCount = pin.pins.length;
+    console.log(pin);
+
+    // raise acknowledge message event to the sender
+    client.socket.send(
+      JSON.stringify({
+        eventName: "ack::addPin",
+        payload: {
+          message: "chat Pinned",
+          chatId: chatId,
+          pinsCount: pin.pins.length,
+        },
+      })
+    );
+
+    // send message to all active members excluding sender
+    // filter group active members
+    const members = await ClassMembersSchema.find(
+      { class_id: classId },
+      "class_id member_uid"
+    );
+
+    let membersIds: any[] = [group.creator];
+    members.forEach((member) => membersIds.push(member.member_uid));
+
+    const activeMembers = membersIds.filter(function (member: any) {
+      return member !== userId && !!clientsUsersId[member];
+    });
+
+    activeMembers.forEach((member: any) => {
+      const recipientClient = clients[clientsUsersId[member]];
+      const recipientSocket = recipientClient.socket;
+
+      recipientSocket.send(
+        JSON.stringify({
+          eventName: "se::newPin",
+          payload: {
+            message: "new pinned chat",
+            chatId: chatId,
+            pinsCount: pin.pins.length,
+          },
+        })
+      );
+    });
+  } catch (e) {
+    client.socket.send(
+      JSON.stringify({
+        eventName: "dis::addPin",
+        payload: {
+          message: "message send failed",
+          chatId: payload.chatId,
+        },
+      })
+    );
+    logger.error(e);
+  }
 }
 
 export async function getPins(userEmail: string, classId: string) {
@@ -138,3 +239,5 @@ async function retrieveChatMessage(messageId: string) {
     return null;
   }
 }
+
+export default addPin;
