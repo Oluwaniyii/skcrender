@@ -140,6 +140,7 @@ router.get(
   }
 );
 
+/*
 router.post(
   "/class/:classId/pins",
   AuthProtectionMiddleware,
@@ -170,6 +171,7 @@ router.post(
     }
   }
 );
+*/
 
 async function AuthProtectionMiddleware(
   req: Request,
