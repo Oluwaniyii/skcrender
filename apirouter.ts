@@ -5,7 +5,7 @@ import jwt from "./libraries/jwt";
 import GetChatHistory from "./GetChatHistory";
 import { createClassChannel, getChannelDetails } from "./actions/classChannel";
 import { addChannelMember, removeChannelMember } from "./actions/channelMember";
-import { addBookmark, getBookmarks } from "./actions/bookmark";
+import { addBookmark, getBookmarks, removeBookmark } from "./actions/bookmark";
 import { addPin, getPins } from "./actions/pin";
 import apiValidation from "./apiValidation";
 
@@ -95,6 +95,35 @@ router.post(
       const statusCode = 200;
       const success = true;
       const message = "bookmark added";
+      const data: any = {};
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  "/bookmarks",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const { chatId } = await apiValidation.AddBookmark(req.body);
+
+      const action: any = await removeBookmark(userEmail, chatId);
+      console.log(action);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "bookmark removed";
       const data: any = {};
 
       response.success = success;
