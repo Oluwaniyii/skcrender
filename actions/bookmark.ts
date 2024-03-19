@@ -75,6 +75,28 @@ export async function addBookmark(userEmail: string, chatId: string) {
   return bookmark.bookmarks;
 }
 
+export async function removeBookmark(userEmail: string, chatId: string) {
+  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
+  if (!user)
+    throw new AppException(domainError.NOT_FOUND, `something went wrong`);
+  const userId = user._id.toString();
+
+  let bookmark: any = await BookmarkSchema.findOne({ user_id: userId });
+  if (bookmark) {
+    if (bookmark.bookmarks.includes(chatId)) {
+      bookmark.bookmarks = bookmark.bookmarks.filter(
+        (bookmarkId: string) => bookmarkId !== chatId
+      );
+      await bookmark.save();
+    }
+
+    console.log(bookmark);
+    return bookmark.bookmarks;
+  } else {
+    return [];
+  }
+}
+
 export async function getBookmarks(userEmail: string) {
   const user = await Usermodel.findOne({ email: userEmail }, "_id");
   if (!user)
