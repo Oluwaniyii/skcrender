@@ -65,7 +65,7 @@ async function deleteChat(payload: any, client: client) {
             eventName: "ack::deleteChat",
             payload: {
               message: "Chat deleted",
-              chatId: chat._id,
+              chatId: chatId,
               recipient: recipient,
             },
           })
@@ -73,7 +73,7 @@ async function deleteChat(payload: any, client: client) {
 
         const recieveDeleteChatPayload = {
           sender: chat.sender,
-          chatId: chat._id,
+          chatId: chatId,
           recipient: chat.recipient,
         };
 
@@ -110,14 +110,14 @@ async function deleteChat(payload: any, client: client) {
             payload: {
               message: "Chat deleted",
               recipient: chat.recipient,
-              chatId: chat._id,
+              chatId: chatId,
             },
           })
         );
 
         const recieveDeleteChatPayload = {
           sender: chat.sender,
-          chatId: chat._id,
+          chatId: chatId,
           recipient: recipient,
         };
 
