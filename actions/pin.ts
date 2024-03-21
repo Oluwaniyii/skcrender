@@ -97,7 +97,6 @@ export async function addPin(payload: any, client: client) {
     await pin.save();
 
     pinsCount = pin.pins.length;
-    console.log(pin);
 
     // raise acknowledge message event to the sender
     client.socket.send(
@@ -154,8 +153,131 @@ export async function addPin(payload: any, client: client) {
   }
 }
 
+export async function removePin(payload: any, client: client) {
+  try {
+    const { classId, chatId } = payload;
+    const { id: userEmail, uid: userId } = client.user;
+
+    const user = await Usermodel.findOne({ email: userEmail }, "_id");
+    if (!user)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message: "something went wrong",
+            chatId: chatId,
+          },
+        })
+      );
+
+    const group: any = await ClassSchema.findById(classId, "_id creator");
+    if (!group)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message: "cannot perform action because group no longer exist",
+            chatId: chatId,
+          },
+        })
+      );
+
+    if (user._id.toString() !== group.creator)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message:
+              "you cannot perform this action because you are not the group owner",
+            chatId: chatId,
+          },
+        })
+      );
+
+    let pin: any = await PinSchema.findOne({ class_id: classId });
+    let pinsCount: number = 0;
+
+    if (!pin)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message: "chat is not pinned",
+            chatId: chatId,
+          },
+        })
+      );
+
+    if (!pin.pins.includes(chatId))
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message: "chat is not pinned",
+            chatId: chatId,
+          },
+        })
+      );
+
+    pin.pins = pin.pins.filter((pinId: string) => pinId !== chatId);
+    await pin.save();
+    pinsCount = pin.pins.length;
+
+    // raise acknowledge message event to the sender
+    client.socket.send(
+      JSON.stringify({
+        eventName: "ack::removePin",
+        payload: {
+          message: "chat unpinned",
+          chatId: chatId,
+          pinsCount: pin.pins.length,
+        },
+      })
+    );
+
+    // send message to all active members excluding sender
+    // filter group active members
+    const members = await ClassMembersSchema.find(
+      { class_id: classId },
+      "class_id member_uid"
+    );
+    let membersIds: any[] = [group.creator];
+    members.forEach((member) => membersIds.push(member.member_uid));
+
+    const activeMembers = membersIds.filter(function (member: any) {
+      return member !== userId && !!clientsUsersId[member];
+    });
+
+    activeMembers.forEach((member: any) => {
+      const recipientClient = clients[clientsUsersId[member]];
+      const recipientSocket = recipientClient.socket;
+
+      recipientSocket.send(
+        JSON.stringify({
+          eventName: "se::removePin",
+          payload: {
+            message: "chat unpinned",
+            chatId: chatId,
+            pinsCount: pin.pins.length,
+          },
+        })
+      );
+    });
+  } catch (e) {
+    client.socket.send(
+      JSON.stringify({
+        eventName: "dis::removePin",
+        payload: {
+          message: "message send failed",
+          chatId: payload.chatId,
+        },
+      })
+    );
+    logger.error(e);
+  }
+}
+
 export async function getPins(userEmail: string, classId: string) {
-  console.log(userEmail, classId);
   const user = await Usermodel.findOne({ email: userEmail }, "_id");
   if (!user)
     throw new AppException(domainError.NOT_FOUND, `something went wrong`);
