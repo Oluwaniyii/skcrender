@@ -49,8 +49,9 @@ async function sendToIndividual(payload: any, client: client) {
   //upload to cloudinary
   const result: any = await cloudinary.uploader.upload(binary, {
     resource_type: "auto",
+    overwrite: false,
+    use_filename: true,
     unique_filename: true,
-    overwrite: true,
     filename_override: meta.name,
   });
   const { asset_id, public_id, secure_url, format, resource_type } = result;
@@ -96,6 +97,7 @@ async function sendToIndividual(payload: any, client: client) {
         type: type,
         chatId: chat.cId,
         messageId: message._id,
+        mediaUrl: secure_url,
         meta: {
           timestamp: chat.meta.timestamp,
         },
@@ -226,6 +228,7 @@ async function sendToGroup(payload: any, client: client) {
         type: type,
         chatId: chat.cId,
         messageId: message._id,
+        mediaUrl: secure_url,
         meta: {
           timestamp: chat.meta.timestamp,
         },
