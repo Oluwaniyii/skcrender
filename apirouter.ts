@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import AppException from "./AppException";
 import { domainError } from "./domainError";
 import jwt from "./libraries/jwt";
-import GetChatHistory from "./GetChatHistory";
+import { GetChatHistory, GetChatConvo } from "./GetChatHistory";
 import { createClassChannel, getChannelDetails } from "./actions/classChannel";
 import { addChannelMember, removeChannelMember } from "./actions/channelMember";
 import { addBookmark, getBookmarks, removeBookmark } from "./actions/bookmark";
@@ -27,7 +27,45 @@ router.get(
       const action: any = await GetChatHistory(
         sub,
         userid,
-        parseInt(`${limit}`) || 10,
+        parseInt(`${limit}`) || 15,
+        parseInt(`${page}`) || 1
+      );
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["chats"] = action.chats;
+      data["pagination"] = action.pagination;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/chats/:userid/:chatid",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub } = res.locals.authenticatedUser;
+      const { userid, chatid } = req.params;
+      const { limit, page } = req.query;
+
+      const action: any = await GetChatConvo(
+        sub,
+        userid,
+        chatid,
+        parseInt(`${limit}`) || 15,
         parseInt(`${page}`) || 1
       );
 
