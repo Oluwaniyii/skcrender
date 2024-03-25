@@ -8,7 +8,7 @@ import { domainError } from "./domainError";
 import MediaSchema from "./models/MediaSchema";
 import Usermodel from "./models/Usermodel";
 
-async function GetChatHistory(
+export async function GetChatHistory(
   userEmail: string,
   convoWith: string,
   limit: number = 15,
@@ -21,16 +21,44 @@ async function GetChatHistory(
   else return await GetGroupHistory(userEmail, convoWith, limit, page);
 }
 
+export async function GetChatConvo(
+  userEmail: string,
+  convoWith: string,
+  chatId: string,
+  limit: number = 15,
+  page: number = 1
+) {
+  const EMAIL_REGEXP = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+
+  if (convoWith.match(EMAIL_REGEXP))
+    return await GetIndividualChatConvo(
+      userEmail,
+      convoWith,
+      chatId,
+      limit,
+      page
+    );
+  else
+    return await GetGroupChatConvo(userEmail, convoWith, chatId, limit, page);
+}
+
 async function GetGroupHistory(
   userEmail: string,
   convoWith: string,
   limit: number = 15,
   page: number = 1
 ) {
+  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
+  if (!user)
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `something went wrong`
+    );
+
   const rtc: Array<any> = [];
   const pagination: any = {};
 
-  const channel = await ClassSchema.findById(convoWith, "_id");
+  const channel = await ClassSchema.findById(convoWith, "_id creator");
 
   if (!channel)
     throw new AppException(
@@ -42,15 +70,8 @@ async function GetGroupHistory(
     { class_id: convoWith },
     "class_id member_uid"
   );
-  let membersIds: any[] = [];
+  let membersIds: any[] = [channel.creator];
   members.forEach((member) => membersIds.push(member.member_uid));
-
-  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
-  if (!user)
-    throw new AppException(
-      domainError.CHANNEL_MEMBER_ERROR,
-      `you can't send or receive messages on group ${convoWith} because you are not a member`
-    );
 
   if (!membersIds.includes(user._id.toString()))
     throw new AppException(
@@ -117,6 +138,7 @@ async function GetGroupHistory(
   pagination["limit"] = limit;
   pagination["page"] = page;
   pagination["totalEntries"] = totalEntries;
+  pagination["current"] = `${PAGE_LINK}${page}`;
   pagination["next"] = page < LAST_PAGE ? `${PAGE_LINK}${page + 1}` : null;
   pagination["prev"] = page > 1 ? `${PAGE_LINK}${page - 1}` : null;
   pagination["last"] = `${PAGE_LINK}${LAST_PAGE}`;
@@ -186,12 +208,172 @@ async function GetIndividualHistory(
   pagination["limit"] = limit;
   pagination["page"] = page;
   pagination["totalEntries"] = totalEntries;
+  pagination["current"] = `${PAGE_LINK}${page}`;
   pagination["next"] = page < LAST_PAGE ? `${PAGE_LINK}${page + 1}` : null;
   pagination["prev"] = page > 1 ? `${PAGE_LINK}${page - 1}` : null;
-  pagination["last"] = `${PAGE_LINK}${LAST_PAGE}`;
-  pagination["first"] = `${PAGE_LINK}1`;
+  pagination["last"] = `/chats/${convoWith}?limit=${limit}&page=${LAST_PAGE}`;
+  pagination["first"] = `/chats/${convoWith}?limit=${limit}&page=1`;
 
   return { pagination: pagination, chats: rtc };
+}
+
+async function GetIndividualChatConvo(
+  userEmail: string,
+  convoWith: string,
+  chatId: string,
+  limit: number = 4,
+  page: number = 1
+) {
+  const chat: any = await ChatSchema.findOne(
+    {
+      cId: chatId,
+      $or: [{ recipient: convoWith }, { sender: convoWith }],
+    },
+    "cId to sender recipient meta createdAt"
+  );
+
+  if (!chat)
+    throw new AppException(domainError.NOT_FOUND, `something went wrong`);
+
+  const totalEntries = (
+    await ChatSchema.find(
+      {
+        $or: [
+          { sender: convoWith, recipient: userEmail },
+          { sender: userEmail, recipient: convoWith },
+        ],
+      },
+      "_id"
+    )
+  ).length;
+
+  const chatOffset = (
+    await ChatSchema.find(
+      {
+        $or: [
+          { sender: convoWith, recipient: userEmail },
+          { sender: userEmail, recipient: convoWith },
+        ],
+        "meta.timestamp": { $lte: chat.meta.timestamp },
+      },
+      "_id"
+    )
+  ).length;
+
+  const chatIndex = totalEntries - chatOffset;
+  const chatPage = Math.ceil(chatIndex / limit);
+  const lastPage = Math.ceil(totalEntries / limit);
+
+  let chats: any = await GetChatHistory(userEmail, convoWith, limit, chatPage);
+
+  if (chats.chats.length < limit) {
+    let chatsExtra = await GetChatHistory(
+      userEmail,
+      convoWith,
+      limit,
+      chatPage - 1
+    );
+
+    chats.chats = chats.chats.concat(chatsExtra.chats);
+    chats.pagination = chatsExtra.pagination;
+  }
+
+  return chats;
+}
+
+async function GetGroupChatConvo(
+  userEmail: string,
+  convoWith: string,
+  chatId: string,
+  limit: number = 15,
+  page: number = 1
+) {
+  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
+  if (!user)
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `something went wrong`
+    );
+
+  const rtc: Array<any> = [];
+  const pagination: any = {};
+
+  const channel = await ClassSchema.findById(convoWith, "_id creator");
+
+  if (!channel)
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `channel ${convoWith} no longer exist`
+    );
+
+  const members = await ClassMembersSchema.find(
+    { class_id: convoWith },
+    "class_id member_uid"
+  );
+  let membersIds: any[] = [channel.creator];
+  members.forEach((member) => membersIds.push(member.member_uid));
+
+  if (!membersIds.includes(user._id.toString()))
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `you can't send or receive messages on group ${convoWith} because you are not a member`
+    );
+
+  const chat: any = await ChatSchema.findOne(
+    {
+      cId: chatId,
+      recipient: convoWith,
+    },
+    "cId to sender recipient meta createdAt"
+  );
+
+  if (!chat)
+    throw new AppException(domainError.NOT_FOUND, `something went wrong`);
+
+  const totalEntries = (
+    await ChatSchema.find(
+      {
+        $or: [
+          { sender: convoWith, recipient: userEmail },
+          { sender: userEmail, recipient: convoWith },
+        ],
+      },
+      "_id"
+    )
+  ).length;
+
+  const chatOffset = (
+    await ChatSchema.find(
+      {
+        $or: [
+          { sender: convoWith, recipient: userEmail },
+          { sender: userEmail, recipient: convoWith },
+        ],
+        "meta.timestamp": { $lte: chat.meta.timestamp },
+      },
+      "_id"
+    )
+  ).length;
+
+  const chatIndex = totalEntries - chatOffset + 1;
+  const chatPage = Math.ceil(chatIndex / limit);
+  const lastPage = Math.ceil(totalEntries / limit);
+
+  let chats: any = await GetChatHistory(userEmail, convoWith, limit, chatPage);
+
+  if (chats.chats.length < limit) {
+    let chatsExtra = await GetChatHistory(
+      userEmail,
+      convoWith,
+      limit,
+      chatPage - 1
+    );
+
+    chats.chats = chats.chats.concat(chatsExtra.chats);
+    chats.pagination = chatsExtra.pagination;
+  }
+
+  return chats;
 }
 
 async function retrieveChatMessage(messageId: string) {
