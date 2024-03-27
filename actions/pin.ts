@@ -134,6 +134,7 @@ export async function addPin(payload: any, client: client) {
           payload: {
             message: "new pinned chat",
             chatId: chatId,
+            classId: classId,
             pinsCount: pin.pins.length,
           },
         })
@@ -258,6 +259,7 @@ export async function removePin(payload: any, client: client) {
           payload: {
             message: "chat unpinned",
             chatId: chatId,
+            classId: classId,
             pinsCount: pin.pins.length,
           },
         })
