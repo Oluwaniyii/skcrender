@@ -266,18 +266,6 @@ async function GetIndividualChatConvo(
 
   let chats: any = await GetChatHistory(userEmail, convoWith, limit, chatPage);
 
-  if (chats.chats.length < limit) {
-    let chatsExtra = await GetChatHistory(
-      userEmail,
-      convoWith,
-      limit,
-      chatPage - 1
-    );
-
-    chats.chats = chats.chats.concat(chatsExtra.chats);
-    chats.pagination = chatsExtra.pagination;
-  }
-
   return chats;
 }
 
@@ -360,18 +348,6 @@ async function GetGroupChatConvo(
   const lastPage = Math.ceil(totalEntries / limit);
 
   let chats: any = await GetChatHistory(userEmail, convoWith, limit, chatPage);
-
-  if (chats.chats.length < limit) {
-    let chatsExtra = await GetChatHistory(
-      userEmail,
-      convoWith,
-      limit,
-      chatPage - 1
-    );
-
-    chats.chats = chats.chats.concat(chatsExtra.chats);
-    chats.pagination = chatsExtra.pagination;
-  }
 
   return chats;
 }
