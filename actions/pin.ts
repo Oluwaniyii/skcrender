@@ -22,7 +22,6 @@ export async function addPin(payload: any, client: client) {
   try {
     const { classId, chatId } = payload;
     const { id: userEmail, uid: userId } = client.user;
-
     const user = await Usermodel.findOne({ email: userEmail }, "_id");
     if (!user)
       return client.socket.send(
@@ -31,6 +30,7 @@ export async function addPin(payload: any, client: client) {
           payload: {
             message: "something went wrong",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -43,6 +43,7 @@ export async function addPin(payload: any, client: client) {
           payload: {
             message: "you cannot pin chat because group no longer exist",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -55,6 +56,7 @@ export async function addPin(payload: any, client: client) {
           payload: {
             message: "chat does not exist",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -67,6 +69,7 @@ export async function addPin(payload: any, client: client) {
             message:
               "you cannot pin this chat because you are not the group owner",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -149,6 +152,7 @@ export async function addPin(payload: any, client: client) {
         payload: {
           message: "message send failed",
           chatId: payload.chatId,
+          classId: payload.classId,
         },
       })
     );
@@ -169,6 +173,7 @@ export async function removePin(payload: any, client: client) {
           payload: {
             message: "something went wrong",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -181,6 +186,7 @@ export async function removePin(payload: any, client: client) {
           payload: {
             message: "cannot perform action because group no longer exist",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -193,6 +199,7 @@ export async function removePin(payload: any, client: client) {
             message:
               "you cannot perform this action because you are not the group owner",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -207,6 +214,7 @@ export async function removePin(payload: any, client: client) {
           payload: {
             message: "chat is not pinned",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -218,6 +226,7 @@ export async function removePin(payload: any, client: client) {
           payload: {
             message: "chat is not pinned",
             chatId: chatId,
+            classId: classId,
           },
         })
       );
@@ -234,6 +243,7 @@ export async function removePin(payload: any, client: client) {
           message: "chat unpinned",
           chatId: chatId,
           pinsCount: pin.pins.length,
+          classId: classId,
         },
       })
     );
@@ -274,6 +284,7 @@ export async function removePin(payload: any, client: client) {
         payload: {
           message: "message send failed",
           chatId: payload.chatId,
+          classId: payload.classId,
         },
       })
     );
