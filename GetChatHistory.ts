@@ -260,7 +260,7 @@ async function GetIndividualChatConvo(
     )
   ).length;
 
-  const chatIndex = totalEntries - chatOffset;
+  const chatIndex = totalEntries - chatOffset + 1;
   const chatPage = Math.ceil(chatIndex / limit);
   const lastPage = Math.ceil(totalEntries / limit);
 
@@ -318,27 +318,12 @@ async function GetGroupChatConvo(
   if (!chat)
     throw new AppException(domainError.NOT_FOUND, `something went wrong`);
 
-  const totalEntries = (
-    await ChatSchema.find(
-      {
-        $or: [
-          { sender: convoWith, recipient: userEmail },
-          { sender: userEmail, recipient: convoWith },
-        ],
-      },
-      "_id"
-    )
-  ).length;
+  const totalEntries = (await ChatSchema.find({ recipient: convoWith }, "_id"))
+    .length;
 
   const chatOffset = (
     await ChatSchema.find(
-      {
-        $or: [
-          { sender: convoWith, recipient: userEmail },
-          { sender: userEmail, recipient: convoWith },
-        ],
-        "meta.timestamp": { $lte: chat.meta.timestamp },
-      },
+      { recipient: convoWith, "meta.timestamp": { $lte: chat.meta.timestamp } },
       "_id"
     )
   ).length;
