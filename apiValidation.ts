@@ -26,6 +26,17 @@ export async function AddBookmark(requestData: any): Promise<any | void> {
   }
 }
 
+export async function PinChat(requestData: any): Promise<any | void> {
+  const { chatId } = requestData;
+  try {
+    return await addBookmarkSchema.validateAsync({ chatId });
+  } catch (e) {
+    const err: any = e;
+    const message = err.message.replace(/\"/g, "");
+    throw new AppException(domainError.INVALID_OR_MISSING_PARAMETER, message);
+  }
+}
+
 export async function CreateChannel(requestData: any): Promise<any | void> {
   const { name, description } = requestData;
   try {
@@ -52,4 +63,5 @@ export default {
   CreateChannel,
   AddChannelMember,
   AddBookmark,
+  PinChat,
 };

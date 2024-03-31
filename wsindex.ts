@@ -6,6 +6,7 @@ import parseUrl from "parse-url";
 import jwt from "./libraries/jwt";
 import actionSendMessage from "./actions/sendMessage";
 import deleteChat from "./actions/deleteChat";
+import { addPin, removePin } from "./actions/pin";
 import sendAttachment from "./actions/sendAttachment";
 import Usermodel from "./models/Usermodel";
 
@@ -79,6 +80,13 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
         break;
       case "cl::deleteChat":
         deleteChat(payload, clients[socketId]);
+        break;
+
+      case "cl::addPin":
+        addPin(payload, clients[socketId]);
+        break;
+      case "cl::removePin":
+        removePin(payload, clients[socketId]);
         break;
     }
   });
