@@ -176,6 +176,37 @@ router.delete(
   }
 );
 
+router.get(
+  "/class/:classId/pins",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub: userEmail } = res.locals.authenticatedUser;
+      const { classId } = req.params;
+
+      const action: any = await getPins(userEmail, classId);
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["pins"] = action.chats;
+      data["pinsCount"] = action.pinsCount;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 async function AuthProtectionMiddleware(
   req: Request,
   res: Response,
