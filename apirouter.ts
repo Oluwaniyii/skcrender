@@ -53,6 +53,44 @@ router.get(
 );
 
 router.get(
+  "/chats/:userid/:chatid",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sub } = res.locals.authenticatedUser;
+      const { userid, chatid } = req.params;
+      const { limit, page } = req.query;
+
+      const action: any = await GetChatConvo(
+        sub,
+        userid,
+        chatid,
+        parseInt(`${limit}`) || 15,
+        parseInt(`${page}`) || 1
+      );
+
+      const response: any = {};
+      const statusCode = 200;
+      const success = true;
+      const message = "ok";
+      const data: any = {};
+
+      data["chats"] = action.chats;
+      data["pagination"] = action.pagination;
+
+      response.success = success;
+      response.message = message;
+      response.data = data;
+
+      res.status(statusCode);
+      res.json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
   "/bookmarks",
   AuthProtectionMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
