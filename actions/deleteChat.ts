@@ -1,11 +1,12 @@
 import MessageSchema from "../models/MessageSchema";
 import ChatSchema from "../models/ChatSchema";
-import ClassChannelSchema from "../models/ClassChannelSchema";
+import ClassSchema from "../models/ClassSchema";
+import ClassMembersSchema from "../models/ClassMembersSchema";
 import TextSchema from "../models/TextSchema";
 import MediaSchema from "../models/MediaSchema";
 import logger from "../utils/logger";
 
-import { clients, clientsUsers } from "../clientManager";
+import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
 type client = {
   socketId: string;
@@ -17,39 +18,79 @@ async function deleteChat(payload: any, client: client) {
   try {
     const { socketId, user, socket } = client;
     const userId = user.id;
-    const { chatId } = payload;
+    const { chatId, recipient } = payload;
 
-    const chat: any = await ChatSchema.findById(chatId);
+    const chat: any = await ChatSchema.findOne({
+      cId: chatId,
+      $or: [{ recipient: recipient }, { sender: recipient }],
+    });
 
-    if (userId === chat.sender) {
-      await ChatSchema.findByIdAndDelete(chatId);
-
-      const recieveDeleteChatPayload = {
-        sender: userId,
-        chatId: chat._id,
-      };
-
-      // raise acknowledge deleteChat event to the user
-      client.socket.send(
+    if (!chat)
+      return client.socket.send(
         JSON.stringify({
-          eventName: "ack::deleteChat",
+          eventName: "dis::deleteChat",
           payload: {
-            message: "Chat deleted",
-            recipient: chat.recipient,
-            chatId: chat._id,
+            message: "chat does not exist",
+            chatId: chatId,
+            recipient: recipient,
           },
         })
       );
 
+    if (user.id === chat.sender || user.uid === chat.sender) {
       // raise deleteChat event to the other users
       if (chat.to === "group") {
-        const group: any = await ClassChannelSchema.findById(chat.recipient);
-        const activeMembers = group.members.filter(function (member: any) {
-          return member !== userId && !!clientsUsers[member];
+        const group: any = await ClassSchema.findById(
+          chat.recipient,
+          "_id creator"
+        );
+
+        if (!group)
+          return client.socket.send(
+            JSON.stringify({
+              eventName: "dis::deleteChat",
+              payload: {
+                message: "can not delete chat, channel no longer exist",
+                chatId: chatId,
+                recipient: recipient,
+              },
+            })
+          );
+
+        await ChatSchema.findByIdAndDelete(chat._id);
+
+        // raise acknowledge deleteChat event to the user
+        client.socket.send(
+          JSON.stringify({
+            eventName: "ack::deleteChat",
+            payload: {
+              message: "Chat deleted",
+              chatId: chatId,
+              recipient: recipient,
+            },
+          })
+        );
+
+        const recieveDeleteChatPayload = {
+          sender: chat.sender,
+          chatId: chatId,
+          recipient: chat.recipient,
+        };
+
+        // send delete event to all active group members
+        const members = await ClassMembersSchema.find(
+          { class_id: chat.recipient },
+          "class_id member_uid"
+        );
+        let membersIds: any[] = [group.creator];
+        members.forEach((member) => membersIds.push(member.member_uid));
+
+        const activeMembers = membersIds.filter(function (member: any) {
+          return member !== userId && !!clientsUsersId[member];
         });
 
         activeMembers.forEach((member: any) => {
-          const recipientClient = clients[clientsUsers[member]];
+          const recipientClient = clients[clientsUsersId[member]];
           const recipientSocket = recipientClient.socket;
 
           recipientSocket.send(
@@ -60,6 +101,26 @@ async function deleteChat(payload: any, client: client) {
           );
         });
       } else {
+        await ChatSchema.findByIdAndDelete(chat._id);
+
+        // raise acknowledge deleteChat event to the user
+        client.socket.send(
+          JSON.stringify({
+            eventName: "ack::deleteChat",
+            payload: {
+              message: "Chat deleted",
+              recipient: chat.recipient,
+              chatId: chatId,
+            },
+          })
+        );
+
+        const recieveDeleteChatPayload = {
+          sender: chat.sender,
+          chatId: chatId,
+          recipient: recipient,
+        };
+
         if (clientsUsers[chat.recipient]) {
           const recipientClient = clients[clientsUsers[chat.recipient]];
           const recipientSocket = recipientClient.socket;
@@ -73,7 +134,7 @@ async function deleteChat(payload: any, client: client) {
         }
       }
     } else {
-      client.socket.send(
+      return client.socket.send(
         JSON.stringify({
           eventName: "dis::deleteChat",
           payload: {
@@ -84,7 +145,8 @@ async function deleteChat(payload: any, client: client) {
       );
     }
   } catch (e) {
-    client.socket.send(
+    logger.error(e);
+    return client.socket.send(
       JSON.stringify({
         eventName: "dis::deleteChat",
         payload: {
@@ -93,7 +155,6 @@ async function deleteChat(payload: any, client: client) {
         },
       })
     );
-    logger.error(e);
   }
 }
 

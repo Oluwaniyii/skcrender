@@ -5,6 +5,7 @@ import ClassChannelSchema from "../models/ClassChannelSchema";
 import ClassSchema from "../models/ClassSchema";
 import ClassMembersSchema from "../models/ClassMembersSchema";
 import logger from "../utils/logger";
+import Usermodel from "../models/Usermodel";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
@@ -114,7 +115,7 @@ async function sendToGroup(payload: any, client: client) {
 
   // Group has to exist
   // You have to be a member of the group
-  const group: any = await ClassSchema.findById(recipient, "_id");
+  const group: any = await ClassSchema.findById(recipient, "_id creator");
   if (!group)
     return client.socket.send(
       JSON.stringify({
@@ -130,7 +131,7 @@ async function sendToGroup(payload: any, client: client) {
     { class_id: recipient },
     "class_id member_uid"
   );
-  let membersIds: any[] = [];
+  let membersIds: any[] = [group.creator];
   members.forEach((member) => membersIds.push(member.member_uid));
 
   if (!membersIds.includes(userId))
@@ -189,10 +190,19 @@ async function sendToGroup(payload: any, client: client) {
     return member !== userId && !!clientsUsersId[member];
   });
 
+  const senderInfo: any = await Usermodel.findById(
+    userId,
+    "firstName lastName avatar"
+  );
+
   const receiveMessagePayload: any = {
     type: type,
     from: to,
     sender: userId,
+    senderInfo: {
+      name: `${senderInfo?.firstName} ${senderInfo?.lastName}`,
+      avatar: senderInfo?.avatar,
+    },
     recipient: recipient,
     body: body,
     chatId: chatId,

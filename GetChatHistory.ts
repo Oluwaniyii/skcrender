@@ -8,7 +8,7 @@ import { domainError } from "./domainError";
 import MediaSchema from "./models/MediaSchema";
 import Usermodel from "./models/Usermodel";
 
-async function GetChatHistory(
+export async function GetChatHistory(
   userEmail: string,
   convoWith: string,
   limit: number = 15,
@@ -27,10 +27,17 @@ async function GetGroupHistory(
   limit: number = 15,
   page: number = 1
 ) {
+  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
+  if (!user)
+    throw new AppException(
+      domainError.CHANNEL_MEMBER_ERROR,
+      `something went wrong`
+    );
+
   const rtc: Array<any> = [];
   const pagination: any = {};
 
-  const channel = await ClassSchema.findById(convoWith, "_id");
+  const channel = await ClassSchema.findById(convoWith, "_id creator");
 
   if (!channel)
     throw new AppException(
@@ -42,15 +49,8 @@ async function GetGroupHistory(
     { class_id: convoWith },
     "class_id member_uid"
   );
-  let membersIds: any[] = [];
+  let membersIds: any[] = [channel.creator];
   members.forEach((member) => membersIds.push(member.member_uid));
-
-  const user: any = await Usermodel.findOne({ email: userEmail }, "_id");
-  if (!user)
-    throw new AppException(
-      domainError.CHANNEL_MEMBER_ERROR,
-      `you can't send or receive messages on group ${convoWith} because you are not a member`
-    );
 
   if (!membersIds.includes(user._id.toString()))
     throw new AppException(
@@ -69,6 +69,16 @@ async function GetGroupHistory(
   for (let i = 0; i < sortedChats.length; i++) {
     let chat = sortedChats[i];
     let msg: any = await retrieveChatMessage(chat.messageId);
+    let senderDetails: any = await Usermodel.findById(
+      chat.sender,
+      "_id firstName lastName avatar"
+    );
+
+    let senderInfo = {
+      id: senderDetails?._id.toString(),
+      name: `${senderDetails?.firstName} ${senderDetails?.lastName}`,
+      avatar: senderDetails?.avatar,
+    };
 
     if (msg) {
       if (chat.type === "text")
@@ -76,6 +86,7 @@ async function GetGroupHistory(
           chatId: chat.cId,
           type: chat.type,
           sender: chat.sender,
+          senderInfo: senderInfo,
           recipient: chat.recipient,
           messageId: chat.messageId,
           text: msg.text,
@@ -86,6 +97,7 @@ async function GetGroupHistory(
           chatId: chat.cId,
           type: chat.type,
           sender: chat.sender,
+          senderInfo: senderInfo,
           recipient: chat.recipient,
           messageId: chat.messageId,
           name: msg.name,
@@ -105,6 +117,7 @@ async function GetGroupHistory(
   pagination["limit"] = limit;
   pagination["page"] = page;
   pagination["totalEntries"] = totalEntries;
+  pagination["current"] = `${PAGE_LINK}${page}`;
   pagination["next"] = page < LAST_PAGE ? `${PAGE_LINK}${page + 1}` : null;
   pagination["prev"] = page > 1 ? `${PAGE_LINK}${page - 1}` : null;
   pagination["last"] = `${PAGE_LINK}${LAST_PAGE}`;
@@ -174,10 +187,11 @@ async function GetIndividualHistory(
   pagination["limit"] = limit;
   pagination["page"] = page;
   pagination["totalEntries"] = totalEntries;
+  pagination["current"] = `${PAGE_LINK}${page}`;
   pagination["next"] = page < LAST_PAGE ? `${PAGE_LINK}${page + 1}` : null;
   pagination["prev"] = page > 1 ? `${PAGE_LINK}${page - 1}` : null;
-  pagination["last"] = `${PAGE_LINK}${LAST_PAGE}`;
-  pagination["first"] = `${PAGE_LINK}1`;
+  pagination["last"] = `/chats/${convoWith}?limit=${limit}&page=${LAST_PAGE}`;
+  pagination["first"] = `/chats/${convoWith}?limit=${limit}&page=1`;
 
   return { pagination: pagination, chats: rtc };
 }

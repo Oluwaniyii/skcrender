@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 import logger from "../utils/logger";
 import ClassSchema from "../models/ClassSchema";
 import ClassMembersSchema from "../models/ClassMembersSchema";
+import Usermodel from "../models/Usermodel";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
@@ -41,11 +42,16 @@ async function sendToIndividual(payload: any, client: client) {
   const userId = user.id;
   const { to, recipient, type, chatId, binary, meta } = payload;
 
+  const mex: string[] = meta.type ? meta.type.split("/") : [];
+  let cex: any = meta.name && meta.name.split(".");
+  cex = cex[cex.length - 1];
+
   //upload to cloudinary
   const result: any = await cloudinary.uploader.upload(binary, {
     resource_type: "auto",
+    overwrite: false,
+    use_filename: true,
     unique_filename: true,
-    overwrite: true,
     filename_override: meta.name,
   });
   const { asset_id, public_id, secure_url, format, resource_type } = result;
@@ -54,8 +60,8 @@ async function sendToIndividual(payload: any, client: client) {
   const message: any = new MessageSchema({ type: "media" });
   const media: any = new MediaSchema({
     messageId: message._id,
-    mediaType: resource_type,
-    mediaExtension: format,
+    mediaType: mex[0],
+    mediaExtension: cex,
     name: meta.name,
     url: secure_url,
     size: meta.size,
@@ -91,6 +97,7 @@ async function sendToIndividual(payload: any, client: client) {
         type: type,
         chatId: chat.cId,
         messageId: message._id,
+        mediaUrl: secure_url,
         meta: {
           timestamp: chat.meta.timestamp,
         },
@@ -106,8 +113,8 @@ async function sendToIndividual(payload: any, client: client) {
     recipient: recipient,
     name: meta.name,
     size: meta.size,
-    mediaType: resource_type,
-    mediaExtension: format,
+    mediaType: mex[0],
+    mediaExtension: cex,
     url: secure_url,
     chatId: chat.cId,
     messageId: message._id,
@@ -135,9 +142,13 @@ async function sendToGroup(payload: any, client: client) {
   const userId = user.uid;
   const { to, recipient, type, chatId, binary, meta } = payload;
 
+  const mex: string[] = meta.type ? meta.type.split("/") : [];
+  let cex: any = meta.name && meta.name.split(".");
+  cex = cex[cex.length - 1];
+
   // Group has to exist
   // You have to be a member of the group
-  const group: any = await ClassSchema.findById(recipient, "_id");
+  const group: any = await ClassSchema.findById(recipient, "_id creator");
   if (!group)
     return client.socket.send(
       JSON.stringify({
@@ -153,7 +164,7 @@ async function sendToGroup(payload: any, client: client) {
     { class_id: recipient },
     "class_id member_uid"
   );
-  let membersIds: any[] = [];
+  let membersIds: any[] = [group.creator];
   members.forEach((member) => membersIds.push(member.member_uid));
 
   if (!membersIds.includes(userId))
@@ -180,8 +191,8 @@ async function sendToGroup(payload: any, client: client) {
   const message: any = new MessageSchema({ type: "media" });
   const media: any = new MediaSchema({
     messageId: message._id,
-    mediaType: resource_type,
-    mediaExtension: format,
+    mediaType: mex[0],
+    mediaExtension: cex,
     name: meta.name,
     url: secure_url,
     size: meta.size,
@@ -217,6 +228,7 @@ async function sendToGroup(payload: any, client: client) {
         type: type,
         chatId: chat.cId,
         messageId: message._id,
+        mediaUrl: secure_url,
         meta: {
           timestamp: chat.meta.timestamp,
         },
@@ -224,16 +236,25 @@ async function sendToGroup(payload: any, client: client) {
     })
   );
 
+  const senderInfo: any = await Usermodel.findById(
+    userId,
+    "firstName lastName avatar"
+  );
+
   // prepare payload
   const receiveMediaPayload = {
-    from: to,
     type: type,
+    from: to,
     sender: userId,
+    senderInfo: {
+      name: `${senderInfo?.firstName} ${senderInfo?.lastName}`,
+      avatar: senderInfo?.avatar,
+    },
     recipient: recipient,
     name: meta.name,
     size: meta.size,
-    mediaType: resource_type,
-    mediaExtension: format,
+    mediaType: mex[0],
+    mediaExtension: cex,
     url: secure_url,
     chatId: chat.cId,
     messageId: message._id,
