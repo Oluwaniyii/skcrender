@@ -9,6 +9,7 @@ import TextSchema from "../models/TextSchema";
 import MediaSchema from "../models/MediaSchema";
 import MessageSchema from "../models/MessageSchema";
 import logger from "../utils/logger";
+import CommunitySchema from "../models/CommunitySchema";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
 
@@ -35,25 +36,29 @@ export async function addPin(payload: any, client: client) {
         })
       );
 
-    const group: any = await ClassSchema.findById(classId, "_id creator");
-    if (!group)
-      return client.socket.send(
-        JSON.stringify({
-          eventName: "dis::addPin",
-          payload: {
-            message: "you cannot pin chat because group no longer exist",
-            chatId: chatId,
-          },
-        })
-      );
-
-    const chat: any = await ChatSchema.findOne({ cId: chatId }, "cId");
+    const chat: any = await ChatSchema.findOne({ cId: chatId });
     if (!chat)
       return client.socket.send(
         JSON.stringify({
           eventName: "dis::addPin",
           payload: {
             message: "chat does not exist",
+            chatId: chatId,
+          },
+        })
+      );
+
+    const group: any =
+      chat.to === "group"
+        ? await ClassSchema.findById(classId, "_id creator")
+        : await CommunitySchema.findById(classId);
+
+    if (!group)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::addPin",
+          payload: {
+            message: "you cannot pin chat because group no longer exist",
             chatId: chatId,
           },
         })
@@ -112,13 +117,21 @@ export async function addPin(payload: any, client: client) {
 
     // send message to all active members excluding sender
     // filter group active members
-    const members = await ClassMembersSchema.find(
-      { class_id: classId },
-      "class_id member_uid"
-    );
+    let members: any[];
+    let membersIds: any[];
 
-    let membersIds: any[] = [group.creator];
-    members.forEach((member) => membersIds.push(member.member_uid));
+    if (chat.to === "community") {
+      members = group.members;
+      membersIds = [];
+      members.forEach((member: any) => membersIds.push(member.userId));
+    } else {
+      members = await ClassMembersSchema.find(
+        { class_id: classId },
+        "class_id member_uid"
+      );
+      membersIds = [group.creator];
+      members.forEach((member: any) => membersIds.push(member.member_uid));
+    }
 
     const activeMembers = membersIds.filter(function (member: any) {
       return member !== userId && !!clientsUsersId[member];
@@ -145,7 +158,7 @@ export async function addPin(payload: any, client: client) {
       JSON.stringify({
         eventName: "dis::addPin",
         payload: {
-          message: "message send failed",
+          message: "pin chat failed",
           chatId: payload.chatId,
         },
       })
@@ -171,7 +184,23 @@ export async function removePin(payload: any, client: client) {
         })
       );
 
-    const group: any = await ClassSchema.findById(classId, "_id creator");
+    const chat: any = await ChatSchema.findOne({ cId: chatId });
+    if (!chat)
+      return client.socket.send(
+        JSON.stringify({
+          eventName: "dis::removePin",
+          payload: {
+            message: "chat does not exist",
+            chatId: chatId,
+          },
+        })
+      );
+
+    const group: any =
+      chat.to === "group"
+        ? await ClassSchema.findById(classId, "_id creator")
+        : await CommunitySchema.findById(classId);
+
     if (!group)
       return client.socket.send(
         JSON.stringify({
@@ -238,12 +267,21 @@ export async function removePin(payload: any, client: client) {
 
     // send message to all active members excluding sender
     // filter group active members
-    const members = await ClassMembersSchema.find(
-      { class_id: classId },
-      "class_id member_uid"
-    );
-    let membersIds: any[] = [group.creator];
-    members.forEach((member) => membersIds.push(member.member_uid));
+    let members: any[];
+    let membersIds: any[];
+
+    if (chat.to === "community") {
+      members = group.members;
+      membersIds = [];
+      members.forEach((member: any) => membersIds.push(member.userId));
+    } else {
+      members = await ClassMembersSchema.find(
+        { class_id: classId },
+        "class_id member_uid"
+      );
+      membersIds = [group.creator];
+      members.forEach((member: any) => membersIds.push(member.member_uid));
+    }
 
     const activeMembers = membersIds.filter(function (member: any) {
       return member !== userId && !!clientsUsersId[member];
@@ -285,21 +323,28 @@ export async function getPins(userEmail: string, classId: string) {
     throw new AppException(domainError.NOT_FOUND, `something went wrong`);
   const userId = user._id.toString();
 
-  const group: any = await ClassSchema.findById(classId, "_id creator");
+  const isClass = await ClassSchema.findById(classId, "_id creator");
+  const isCommunity = await CommunitySchema.findById(classId);
+
+  const group: any = isClass || isCommunity;
   if (!group)
-    throw new AppException(domainError.NOT_FOUND, `group no longer exist`);
+    throw new AppException(domainError.NOT_FOUND, `channel no longer exist`);
 
-  const isMember = !!(await ClassMembersSchema.findOne({
-    class_id: classId,
-    member_uid: userId,
-  }));
+  // check if member
+  let isMember = isClass
+    ? !!(await ClassMembersSchema.findOne({
+        class_id: classId,
+        member_uid: userId,
+      }))
+    : !!group.members.find((member: any) => member.userId === userId);
 
-  if (userId !== group.creator && isMember !== true)
+  if (userId !== group.creator && !!isMember !== true)
     throw new AppException(
       domainError.NOT_FOUND,
-      `you cannot access group pins beacause you are not a memeber`
+      `you cannot access group pins beacause you are not a member`
     );
 
+  // load chats
   let pinsCount: number = 0;
   let chats: any[] = [];
   let rtc: any[] = [];
