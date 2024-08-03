@@ -18,9 +18,9 @@
 
         <div>
             <h2>Send To Group</h2>
-            <textarea name="" id="messageboxtg" cols="30" rows="10" placeholder="type a message">Hello</textarea>
+            <textarea name="" id="messageboxtg" cols="30" rows="10" placeholder="type a message">Hello Class</textarea>
             <br />
-            <input type="text" id="receiverg" placeholder="to:" value="65dbcd66aeebd0d5a4adc686" />
+            <input type="text" id="receiverg" placeholder="to:" value="663f7257cbb46e10929184b3" />
             <button onclick=" sendToGroup()">send</button>
             <div />
 
@@ -63,9 +63,9 @@
 
         <div>
             <h2>Pin Group Chat</h2>
-            <input id="pingroupid" type="text" placeholder="to:" value="65ef0b2afa428bd269260c18">
+            <input id="pingroupid" type="text" placeholder="to:" value="">
             <br />
-            <input type="text" id="pinchatid" placeholder="to:" value="32724ebd-2e6e-4da0-988f-059c0c468513" />
+            <input type="text" id="pinchatid" placeholder="chatId:" value="" />
             <input type="button" value="remove pin" onclick="removePinGroupChat()" />
             <input type="button" value="add pin" onclick="pinGroupChat()" />
         </div>
@@ -242,9 +242,26 @@
         const data = JSON.parse(e.data);
         console.log(data);
     };
-    ws.onopen = (function (e) {
+    ws.onopen = (async function (e) {
         console.log("ws connection opened");
-        console.log(e);
+        registerServiceWorker();
+
+        async function registerServiceWorker() {
+            const publicVapidKey = "BGHJ5Y0e5iWHZhnwWJTkHeCh6fgVUXPCusbTL_Whsy0DkWepjjT9KDCbt4pNnZZvtUAEIKsGY9KexBzk2FBHQv4";
+
+            const register = await navigator.serviceWorker.register('./sw.js', {
+                scope: '/'
+            });
+
+            const subscription = await register.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: publicVapidKey,
+            });
+
+            console.log(subscription);
+
+            ws.emit("sys::pn::addSubscription", subscription);
+        }
     })
     ws.onerror = function (e) {
         console.log("ws connection error");

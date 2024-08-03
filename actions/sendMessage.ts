@@ -9,6 +9,7 @@ import Usermodel from "../models/Usermodel";
 import CommunitySchema from "../models/CommunitySchema";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
+import { Push } from "../Notification";
 
 type client = {
   socketId: string;
@@ -85,6 +86,11 @@ async function sendToIndividual(payload: any, client: client) {
   );
 
   // prepare payload
+  const senderInfo: any = await Usermodel.findById(
+    user.uid,
+    "firstName lastName email avatar"
+  );
+
   const receiveMessagePayload = {
     from: to,
     type: type,
@@ -109,6 +115,12 @@ async function sendToIndividual(payload: any, client: client) {
         payload: receiveMessagePayload,
       })
     );
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: body,
+      icon: senderInfo.avatar,
+    });
   }
 }
 
@@ -196,7 +208,7 @@ async function sendToGroup(payload: any, client: client) {
 
   const senderInfo: any = await Usermodel.findById(
     userId,
-    "firstName lastName avatar"
+    "firstName lastName email avatar"
   );
 
   const receiveMessagePayload: any = {
@@ -217,7 +229,7 @@ async function sendToGroup(payload: any, client: client) {
   };
 
   // send message to all active members
-  activeMembers.forEach((member: any) => {
+  activeMembers.forEach(async (member: any) => {
     const recipientClient = clients[clientsUsersId[member]];
     const recipientSocket = recipientClient.socket;
 
@@ -227,6 +239,15 @@ async function sendToGroup(payload: any, client: client) {
         payload: receiveMessagePayload,
       })
     );
+
+    console.log("Calling push on channel");
+    console.log(recipientClient.user.id);
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: body,
+      icon: senderInfo.avatar,
+    });
   });
 }
 
@@ -315,7 +336,7 @@ async function sendToCommunity(payload: any, client: client) {
 
   const senderInfo: any = await Usermodel.findById(
     userId,
-    "firstName lastName avatar"
+    "firstName lastName email avatar"
   );
 
   const receiveMessagePayload: any = {
@@ -336,7 +357,7 @@ async function sendToCommunity(payload: any, client: client) {
   };
 
   // send message to all active members
-  activeMembers.forEach((member: any) => {
+  activeMembers.forEach(async (member: any) => {
     const recipientClient = clients[clientsUsersId[member]];
     const recipientSocket = recipientClient.socket;
 
@@ -346,7 +367,28 @@ async function sendToCommunity(payload: any, client: client) {
         payload: receiveMessagePayload,
       })
     );
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: body,
+      icon: senderInfo.avatar,
+    });
   });
+}
+
+async function push(
+  to: string,
+  data: {
+    from: string;
+    body: string;
+    icon: string;
+  }
+) {
+  console.log("Pushing..");
+  console.log();
+  
+  
+  await Push(to, data);
 }
 
 export default sendMessage;

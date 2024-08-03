@@ -8,6 +8,7 @@ import { addChannelMember, removeChannelMember } from "./actions/channelMember";
 import { addBookmark, getBookmarks, removeBookmark } from "./actions/bookmark";
 import { addPin, getPins } from "./actions/pin";
 import apiValidation from "./apiValidation";
+import Redis from "./libraries/redis";
 
 const router = require("express").Router();
 
@@ -206,6 +207,29 @@ router.get(
     }
   }
 );
+
+/*
+router.post(
+  "/system/pn/subscribe",
+  AuthProtectionMiddleware,
+  async function (req: Request, res: Response, next: NextFunction) {
+    const subscription = req.body;
+    const { sub: userEmail } = res.locals.authenticatedUser;
+
+    let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
+    userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
+    userSubscriptions.push(subscription);
+
+    await Redis.setWithExpiry(
+      `pnsub_${userEmail}`,
+      JSON.stringify(userSubscriptions),
+      259200000 // 3days
+    );
+
+    res.status(201).json({ message: "subscription added" });
+  }
+);
+*/
 
 async function AuthProtectionMiddleware(
   req: Request,

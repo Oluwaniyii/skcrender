@@ -13,6 +13,7 @@ import Usermodel from "./models/Usermodel";
 dotenv.config();
 
 import { clients, clientsUsers, clientsUsersId } from "./clientManager";
+import { addPnSubscription, popPnSubscription } from "./Notification";
 
 const WS_PORT: number = config.get("ws.port");
 const WS_BASE: string = config.get("ws.base");
@@ -32,7 +33,6 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
 
   // authenticate
   const authenticatedUser: any = await jwt.decode(bearerToken);
-
   if (!authenticatedUser) return ws.close(4000, "invalid bearer token");
 
   // initialize and store connection
@@ -56,9 +56,10 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
   console.log(clientsUsers);
   console.log(clientsUsersId);
 
-  // close connection
-  ws.on("close", function (...args: any[]) {
+  ws.on("close", async function (...args: any[]) {
     console.log("Received close event from client " + socketId);
+
+    await popPnSubscription(userEmail);
 
     if (clients[socketId]) delete clients[socketId];
     if (clientsUsers[userEmail]) delete clientsUsers[userEmail];
@@ -66,8 +67,7 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
     ws.close();
   });
 
-  //
-  ws.on("message", function (message: any) {
+  ws.on("message", async function (message: any) {
     const data = JSON.parse(message.toString());
     const { eventName, payload } = data;
 
@@ -87,6 +87,11 @@ wss.on("connection", async function (ws: WebSocket, req: any) {
         break;
       case "cl::removePin":
         removePin(payload, clients[socketId]);
+        break;
+
+      // System
+      case "sys::pn::addSubscription":
+        await addPnSubscription(userEmail, payload);
         break;
     }
   });

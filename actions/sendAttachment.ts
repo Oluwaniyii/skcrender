@@ -10,6 +10,7 @@ import Usermodel from "../models/Usermodel";
 import CommunitySchema from "../models/CommunitySchema";
 
 import { clients, clientsUsers, clientsUsersId } from "../clientManager";
+import { Push } from "../Notification";
 
 type client = {
   socketId: string;
@@ -110,6 +111,11 @@ async function sendToIndividual(payload: any, client: client) {
   );
 
   // prepare payload
+  const senderInfo: any = await Usermodel.findById(
+    user.uid,
+    "firstName lastName email avatar"
+  );
+
   const receiveMediaPayload = {
     from: to,
     type: type,
@@ -129,15 +135,21 @@ async function sendToIndividual(payload: any, client: client) {
 
   // raise receiveMessage event to the recipient if online
   if (clientsUsers[recipient]) {
-    const recepientClient = clients[clientsUsers[recipient]];
-    const recepientSocket = recepientClient.socket;
+    const recipientClient = clients[clientsUsers[recipient]];
+    const recipientSocket = recipientClient.socket;
 
-    recepientSocket.send(
+    recipientSocket.send(
       JSON.stringify({
         eventName: "se::receiveAttachment",
         payload: receiveMediaPayload,
       })
     );
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: "attachment",
+      icon: senderInfo.avatar,
+    });
   }
 }
 
@@ -242,7 +254,7 @@ async function sendToGroup(payload: any, client: client) {
 
   const senderInfo: any = await Usermodel.findById(
     userId,
-    "firstName lastName avatar"
+    "firstName lastName email avatar"
   );
 
   // prepare payload
@@ -274,7 +286,7 @@ async function sendToGroup(payload: any, client: client) {
   });
 
   // send message to all active members
-  activeMembers.forEach((member: any) => {
+  activeMembers.forEach(async (member: any) => {
     const recipientClient = clients[clientsUsersId[member]];
     const recipientSocket = recipientClient.socket;
 
@@ -284,6 +296,12 @@ async function sendToGroup(payload: any, client: client) {
         payload: receiveMediaPayload,
       })
     );
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: "attachment",
+      icon: senderInfo.avatar,
+    });
   });
 }
 
@@ -418,7 +436,7 @@ async function sendToCommunity(payload: any, client: client) {
   });
 
   // send message to all active members
-  activeMembers.forEach((member: any) => {
+  activeMembers.forEach(async (member: any) => {
     const recipientClient = clients[clientsUsersId[member]];
     const recipientSocket = recipientClient.socket;
 
@@ -428,6 +446,25 @@ async function sendToCommunity(payload: any, client: client) {
         payload: receiveMediaPayload,
       })
     );
+
+    await push(recipientClient.user.id, {
+      from: senderInfo.email,
+      body: "attachment",
+      icon: senderInfo.avatar,
+    });
   });
 }
+
+async function push(
+  to: string,
+  data: {
+    from: string;
+    body: string;
+    icon: string;
+  }
+) {
+  console.log("calling push message");
+  await Push(to, data);
+}
+
 export default sendFile;
