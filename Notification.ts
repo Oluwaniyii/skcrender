@@ -1,5 +1,7 @@
+import { log } from "winston";
 import Redis from "./libraries/redis";
 import WebPush from "web-push";
+import winston from "./utils/logger/winston";
 
 const publicVapidKey =
   "BGHJ5Y0e5iWHZhnwWJTkHeCh6fgVUXPCusbTL_Whsy0DkWepjjT9KDCbt4pNnZZvtUAEIKsGY9KexBzk2FBHQv4";
@@ -12,42 +14,44 @@ WebPush.setVapidDetails(
 );
 
 export async function addPnSubscription(userEmail: string, subscription: any) {
-  console.log(subscription);
+  try {
+    let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
+    userSubscriptions =
+      (userSubscriptions?.trim() && JSON.parse(userSubscriptions)) || [];
 
-  let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
-  userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
-  userSubscriptions.push(subscription);
+    userSubscriptions.push(subscription);
 
-  await Redis.setWithExpiry(
-    `pnsub_${userEmail}`,
-    JSON.stringify(userSubscriptions),
-    259200 // 3days
-  );
+    await Redis.setWithExpiry(
+      `pnsub_${userEmail}`,
+      JSON.stringify(userSubscriptions),
+      259200 // 3days
+    );
+  } catch (e) {
+    console.log(e);
+    winston.error("addPnSubscription error", e);
+  }
 }
 
 export async function popPnSubscription(userEmail: string) {
-  console.log("calling popPnSubscription");
-  console.log(await Redis.getKey(`pnsub_${userEmail}`));
-  let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
-  if (!userSubscriptions) return;
+  try {
+    let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
+    if (!userSubscriptions) return;
+    userSubscriptions =
+      (userSubscriptions?.trim() && JSON.parse(userSubscriptions)) || [];
 
-  userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
+    userSubscriptions = userSubscriptions.pop();
 
-  console.log("old userSubscriptions");
-  console.log(userSubscriptions);
+    await Redis.setWithExpiry(
+      `pnsub_${userEmail}`,
+      JSON.stringify(userSubscriptions),
+      259200 // 3days
+    );
 
-  userSubscriptions = userSubscriptions.pop();
-
-  console.log("upd userSubscriptions");
-  console.log(userSubscriptions);
-
-  await Redis.setWithExpiry(
-    `pnsub_${userEmail}`,
-    JSON.stringify(userSubscriptions),
-    259200 // 3days
-  );
-
-  console.log(await Redis.getKey(`pnsub_${userEmail}`));
+    console.log(await Redis.getKey(`pnsub_${userEmail}`));
+  } catch (e) {
+    console.log(e);
+    winston.error("popPnSubscription error", e);
+  }
 }
 
 export async function Push(
@@ -72,7 +76,10 @@ export async function Push(
     console.log(userSubscriptions[0]);
 
     if (userSubscriptions.length)
-      WebPush.sendNotification(userSubscriptions[0], JSON.stringify(data));
+      WebPush.sendNotification(
+        userSubscriptions[userSubscriptions.length - 1],
+        JSON.stringify(data)
+      );
   } catch (error) {
     console.log("Web Notification Failed!");
     console.log(error);
