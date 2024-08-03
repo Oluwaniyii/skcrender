@@ -21,6 +21,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
+    "firebase": "^10.12.5",
     "joi": "^17.12.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.1.1",
@@ -29,6 +30,7 @@
     "redis": "^4.6.12",
     "url-parse": "^1.5.10",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
     "winston": "^3.11.0",
     "ws": "^8.16.0"
   },
@@ -41,6 +43,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.9",
     "@types/uuid": "^9.0.8",
+    "@types/web-push": "^3.6.3",
     "@types/ws": "^8.5.10",
     "chai": "^4.4.1",
     "chai-as-promised": "^7.1.1",
@@ -52,5 +55,6 @@
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
-  }
+  },
+  "gcm_sender_id": "103953800507"
 }

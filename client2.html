@@ -16,25 +16,156 @@
         <input type="text" id="receiver" placeholder="to:" value="user2@gmail.com" />
         <button onclick=" sendMessage()">send</button>
 
-        <h2>Delete A Chat</h2>
-        <input type="text" id="chatid" placeholder="id of chat you want to delete:" value="" />
-        <button onclick=" deleteMessage()">delete</button>
-    </div>
+        <div>
+            <h2>Send To Group</h2>
+            <textarea name="" id="messageboxtg" cols="30" rows="10" placeholder="type a message">Hello</textarea>
+            <br />
+            <input type="text" id="receiverg" placeholder="to:" value="65dbcd66aeebd0d5a4adc686" />
+            <button onclick=" sendToGroup()">send</button>
+            <div />
+
+            <h2>Send To Community</h2>
+            <textarea name="" id="messageboxtc" cols="30" rows="10" placeholder="type a message">Hello</textarea>
+            <br />
+            <input type="text" id="receivertc" placeholder="to:" value="665ea6f8bde259850b0efcac" />
+            <button onclick="sendToCommunity()">send</button>
+            <div />
+
+            <h2>Delete A Chat</h2>
+            <input type="text" id="recipientId" placeholder="id of user chat you want to delete from" value="" />
+            <input type="text" id="chatid" placeholder="id of chat you want to delete:" value="" />
+            <button onclick=" deleteMessage()">delete</button>
+        </div>
+
+        <div>
+            <h2>Send File</h2>
+            <input id="file" name="FilesToUpload" type="file" multiple>
+            <br />
+            <input type="text" id="receiverf" placeholder="to:" value="philipowolabi79@gmail.com" />
+            <input type="button" value="Send" onclick="sendFile()" />
+        </div>
+
+        <div>
+            <h2>Send File to group</h2>
+            <input id="fileg" name="FilesToUpload" type="file" multiple>
+            <br />
+            <input type="text" id="receiverfg" placeholder="to:" value="65dbcd66aeebd0d5a4adc686" />
+            <input type="button" value="Send" onclick="sendFileToGroup()" />
+        </div>
+
+        <div>
+            <h2>Send File to community</h2>
+            <input id="filetc" name="FilesToUpload" type="file" multiple>
+            <br />
+            <input type="text" id="receivertc" placeholder="to:" value="665ea6f8bde259850b0efcac" />
+            <input type="button" value="Send" onclick="sendFileToCommunity()" />
+        </div>
+
+        <div>
+            <h2>Pin Group Chat</h2>
+            <input id="pingroupid" type="text" placeholder="to:" value="">
+            <br />
+            <input type="text" id="pinchatid" placeholder="chatId:" value="" />
+            <input type="button" value="remove pin" onclick="removePinGroupChat()" />
+            <input type="button" value="add pin" onclick="pinGroupChat()" />
+        </div>
 </body>
 <script>
     WebSocket.prototype.emit = function (eventName, payload) {
         this.send(JSON.stringify({ eventName, payload }));
     }
+
 </script>
 <script>
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMUBnbWFpbC5jb20ifQ.2cpdF0XTrGZAq4YVMXlCFIs8weIUhd0M8MBcS_B7s0A"
-    const ws = new WebSocket("ws://localhost:8383?token=" + token);
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJheW9kZWxleW5peWlpQGdtYWlsLmNvbSJ9._Uk6BBT09sU6diPFTAA9PGmjm54WBsqkVGKMkyxakU0"
 
-    ws.onerror = function (e) {
-        console.log(e);
+    // let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJheW9kZWxleW5peWlpQGdtYWlsLmNvbSJ9._Uk6BBT09sU6diPFTAA9PGmjm54WBsqkVGKMkyxakU0"
+    // let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMkBnbWFpbC5jb20ifQ._Z--2kH07a7QYVEskVUl14jQK1d-jVUyYqbjEVdkrD0"
+
+    // let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZW1wZXN0YXQ0NTZAZ21haWwuY29tIn0.wPPST-C1N82MClw3PldJBC8_QD0qejl6UPjTwz5UP6Y"
+    // let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwaGlsaXBvd29sYWJpNzlAZ21haWwuY29tIn0.cOPtfFFCJRM5sRDHA77kJBy_pGAnKzCgC8t7dsgBWpw"
+    // const ws = new WebSocket(`wss://skitechat.onrender.com?token=${token}`);
+    const ws = new WebSocket(`ws://localhost:8383?token=${token}`);
+
+    async function sendFile() {
+        const recipient = document.querySelector("#receiverf").value
+        let files = document.getElementById('file').files;
+
+        Array.from(files).forEach(function (file) {
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                const bin64 = reader.result;
+
+                ws.emit("cl::sendAttachment", {
+                    to: "individual",
+                    type: 'attachment',
+                    recipient: recipient,
+                    binary: bin64,
+                    meta: {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified,
+                    },
+                    chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+                })
+            }
+        })
     }
-    ws.onclose = function (e) {
-        console.log(e);
+
+    async function sendFileToGroup() {
+        const recipient = document.querySelector("#receiverfg").value
+        let files = document.getElementById('fileg').files;
+
+        Array.from(files).forEach(function (file) {
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                const bin64 = reader.result;
+
+                ws.emit("cl::sendAttachment", {
+                    to: "group",
+                    type: 'attachment',
+                    recipient: recipient,
+                    binary: bin64,
+                    meta: {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified,
+                    },
+                    chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+                })
+            }
+        })
+    }
+
+    async function sendFileToCommunity() {
+        const recipient = document.querySelector("#receivertc").value
+        let files = document.getElementById('filetc').files;
+
+        Array.from(files).forEach(function (file) {
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                const bin64 = reader.result;
+
+                ws.emit("cl::sendAttachment", {
+                    to: "community",
+                    type: 'attachment',
+                    recipient: recipient,
+                    binary: bin64,
+                    meta: {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified,
+                    },
+                    chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+                })
+            }
+        })
     }
 
     function sendMessage() {
@@ -44,26 +175,102 @@
         ws.emit("cl::sendMessage", {
             to: "individual",
             type: "text",
-            id: recipient,
-            body: message
+            recipient: recipient,
+            body: message,
+            chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+        })
+    }
+
+    function sendToGroup() {
+        const message = document.querySelector("#messageboxtg").value
+        const recipient = document.querySelector("#receiverg").value
+
+        ws.emit("cl::sendMessage", {
+            to: "group",
+            type: "text",
+            recipient: recipient,
+            body: message,
+            chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+        })
+    }
+
+    function sendToCommunity() {
+        const message = document.querySelector("#messageboxtc").value
+        const recipient = document.querySelector("#receivertc").value
+
+        ws.emit("cl::sendMessage", {
+            to: "community",
+            type: "text",
+            recipient: recipient,
+            body: message,
+            chatId: Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
         })
     }
 
     function deleteMessage() {
         const chatId = document.querySelector("#chatid").value
+        const recipientId = document.querySelector("#recipientId").value
 
-        ws.emit("cl::deleteMessage", {
-            chatId: chatId
+        ws.emit("cl::deleteChat", {
+            recipient: recipientId,
+            chatId: chatId,
         })
     }
 
+    function pinGroupChat() {
+        const pingroupid = document.querySelector("#pingroupid").value
+        const pinchatid = document.querySelector("#pinchatid").value
+
+        ws.emit("cl::addPin", {
+            classId: pingroupid,
+            chatId: pinchatid,
+        })
+    }
+
+    function removePinGroupChat() {
+        const pingroupid = document.querySelector("#pingroupid").value
+        const pinchatid = document.querySelector("#pinchatid").value
+
+        ws.emit("cl::removePin", {
+            classId: pingroupid,
+            chatId: pinchatid,
+        })
+    }
 
     ws.onmessage = function (e) {
         console.log(e);
         const data = JSON.parse(e.data);
         console.log(data);
     };
+    ws.onopen = (async function (e) {
+        console.log("ws connection opened");
+        registerServiceWorker();
 
+        async function registerServiceWorker() {
+            const publicVapidKey = "BGHJ5Y0e5iWHZhnwWJTkHeCh6fgVUXPCusbTL_Whsy0DkWepjjT9KDCbt4pNnZZvtUAEIKsGY9KexBzk2FBHQv4";
+
+            const register = await navigator.serviceWorker.register('./sw.js', {
+                scope: '/'
+            });
+
+            const subscription = await register.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: publicVapidKey,
+            });
+
+            console.log(subscription);
+
+            ws.emit("sys::pn::addSubscription", subscription);
+        }
+    })
+    ws.onerror = function (e) {
+        console.log("ws connection error");
+        console.log(e);
+    }
+    ws.onclose = function (e) {
+        console.log("ws connection closed");
+        console.log(e);
+    }
 
 </script>
 </html>

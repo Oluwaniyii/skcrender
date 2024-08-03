@@ -8,6 +8,7 @@ import BookmarkSchema from "../models/BookmarkSchema";
 import TextSchema from "../models/TextSchema";
 import MediaSchema from "../models/MediaSchema";
 import MessageSchema from "../models/MessageSchema";
+import CommunitySchema from "../models/CommunitySchema";
 
 export async function addBookmark(userEmail: string, chatId: string) {
   const user = await Usermodel.findOne({ email: userEmail }, "_id");
@@ -58,6 +59,26 @@ export async function addBookmark(userEmail: string, chatId: string) {
       );
   }
 
+  if (chat.to === "community") {
+    const group: any = await CommunitySchema.findById(chat.recipient);
+
+    if (!group)
+      throw new AppException(
+        domainError.NOT_FOUND,
+        `you cannot bookmark this chat because community no longer exist`
+      );
+
+    const member = group.members.find(
+      (member: any) => member.userId === userId
+    );
+
+    if (!member)
+      throw new AppException(
+        domainError.NOT_FOUND,
+        `you cannot bookmark this chat because you are not a member of the community`
+      );
+  }
+
   let bookmark = await BookmarkSchema.findOne({ user_id: userId });
   if (bookmark) {
     if (!bookmark.bookmarks.includes(chatId)) {
@@ -90,7 +111,6 @@ export async function removeBookmark(userEmail: string, chatId: string) {
       await bookmark.save();
     }
 
-    console.log(bookmark);
     return bookmark.bookmarks;
   } else {
     return [];

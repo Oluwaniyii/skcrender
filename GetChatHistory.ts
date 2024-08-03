@@ -7,6 +7,7 @@ import AppException from "./AppException";
 import { domainError } from "./domainError";
 import MediaSchema from "./models/MediaSchema";
 import Usermodel from "./models/Usermodel";
+import CommunitySchema from "./models/CommunitySchema";
 
 export async function GetChatHistory(
   userEmail: string,
@@ -58,7 +59,9 @@ async function GetGroupHistory(
   const rtc: Array<any> = [];
   const pagination: any = {};
 
-  const channel = await ClassSchema.findById(convoWith, "_id creator");
+  const isGroup = await ClassSchema.findById(convoWith, "_id creator");
+  const isCommunity = await CommunitySchema.findById(convoWith);
+  const channel: any = isGroup || isCommunity;
 
   if (!channel)
     throw new AppException(
@@ -66,12 +69,21 @@ async function GetGroupHistory(
       `channel ${convoWith} no longer exist`
     );
 
-  const members = await ClassMembersSchema.find(
-    { class_id: convoWith },
-    "class_id member_uid"
-  );
-  let membersIds: any[] = [channel.creator];
-  members.forEach((member) => membersIds.push(member.member_uid));
+  let members: any[];
+  let membersIds: any[];
+
+  if (!!isGroup) {
+    members = await ClassMembersSchema.find(
+      { class_id: convoWith },
+      "class_id member_uid"
+    );
+    membersIds = [channel.creator];
+    members.forEach((member) => membersIds.push(member.member_uid));
+  } else {
+    members = channel.members;
+    membersIds = [];
+    members.forEach((member) => membersIds.push(member.userId));
+  }
 
   if (!membersIds.includes(user._id.toString()))
     throw new AppException(
@@ -286,7 +298,9 @@ async function GetGroupChatConvo(
   const rtc: Array<any> = [];
   const pagination: any = {};
 
-  const channel = await ClassSchema.findById(convoWith, "_id creator");
+  const isGroup = await ClassSchema.findById(convoWith, "_id creator");
+  const isCommunity = await CommunitySchema.findById(convoWith);
+  const channel: any = isGroup || isCommunity;
 
   if (!channel)
     throw new AppException(
@@ -294,12 +308,21 @@ async function GetGroupChatConvo(
       `channel ${convoWith} no longer exist`
     );
 
-  const members = await ClassMembersSchema.find(
-    { class_id: convoWith },
-    "class_id member_uid"
-  );
-  let membersIds: any[] = [channel.creator];
-  members.forEach((member) => membersIds.push(member.member_uid));
+  let members: any[];
+  let membersIds: any[];
+
+  if (!!isGroup) {
+    members = await ClassMembersSchema.find(
+      { class_id: convoWith },
+      "class_id member_uid"
+    );
+    membersIds = [channel.creator];
+    members.forEach((member) => membersIds.push(member.member_uid));
+  } else {
+    members = channel.members;
+    membersIds = [];
+    members.forEach((member) => membersIds.push(member.userId));
+  }
 
   if (!membersIds.includes(user._id.toString()))
     throw new AppException(
