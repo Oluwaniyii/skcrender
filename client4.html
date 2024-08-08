@@ -244,24 +244,7 @@
     };
     ws.onopen = (async function (e) {
         console.log("ws connection opened");
-        registerServiceWorker();
-
-        async function registerServiceWorker() {
-            const publicVapidKey = "BGHJ5Y0e5iWHZhnwWJTkHeCh6fgVUXPCusbTL_Whsy0DkWepjjT9KDCbt4pNnZZvtUAEIKsGY9KexBzk2FBHQv4";
-
-            const register = await navigator.serviceWorker.register('./sw.js', {
-                scope: '/'
-            });
-
-            const subscription = await register.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: publicVapidKey,
-            });
-
-            console.log(subscription);
-
-            ws.emit("sys::pn::addSubscription", subscription);
-        }
+        console.log(e);
     })
     ws.onerror = function (e) {
         console.log("ws connection error");
@@ -271,6 +254,23 @@
         console.log("ws connection closed");
         console.log(e);
     }
+
+
+    setTimeout(async function () {
+        const publicVapidKey = "BGHJ5Y0e5iWHZhnwWJTkHeCh6fgVUXPCusbTL_Whsy0DkWepjjT9KDCbt4pNnZZvtUAEIKsGY9KexBzk2FBHQv4";
+
+        const register = await navigator.serviceWorker.register('./sw.js', {
+            scope: '/'
+        });
+
+        const subscription = await register.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: publicVapidKey,
+        });
+        console.log(subscription);
+
+        ws.emit("sys::pn::addSubscription", subscription);
+    }, 3000)
 
 </script>
 </html>

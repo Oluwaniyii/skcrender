@@ -12,10 +12,10 @@ WebPush.setVapidDetails(
 );
 
 export async function addPnSubscription(userEmail: string, subscription: any) {
-  console.log(subscription);
-
   let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
-  userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
+  userSubscriptions = userSubscriptions && JSON.parse(userSubscriptions.trim());
+  userSubscriptions = userSubscriptions || [];
+
   userSubscriptions.push(subscription);
 
   await Redis.setWithExpiry(
@@ -26,20 +26,11 @@ export async function addPnSubscription(userEmail: string, subscription: any) {
 }
 
 export async function popPnSubscription(userEmail: string) {
-  console.log("calling popPnSubscription");
-  console.log(await Redis.getKey(`pnsub_${userEmail}`));
   let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
   if (!userSubscriptions) return;
-
-  userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
-
-  console.log("old userSubscriptions");
-  console.log(userSubscriptions);
-
-  userSubscriptions = userSubscriptions.pop();
-
-  console.log("upd userSubscriptions");
-  console.log(userSubscriptions);
+  userSubscriptions = userSubscriptions && JSON.parse(userSubscriptions.trim());
+  userSubscriptions = userSubscriptions || [];
+  userSubscriptions.pop();
 
   await Redis.setWithExpiry(
     `pnsub_${userEmail}`,
@@ -47,7 +38,7 @@ export async function popPnSubscription(userEmail: string) {
     259200 // 3days
   );
 
-  console.log(await Redis.getKey(`pnsub_${userEmail}`));
+  let userSubscriptions2: any = await Redis.getKey(`pnsub_${userEmail}`);
 }
 
 export async function Push(
@@ -59,20 +50,15 @@ export async function Push(
   }
 ) {
   try {
-    console.log("Internal Push..");
-    console.log(userEmail, data);
-
     let userSubscriptions: any = await Redis.getKey(`pnsub_${userEmail}`);
     if (!userSubscriptions) return;
     userSubscriptions = userSubscriptions ? JSON.parse(userSubscriptions) : [];
 
-    console.log("userSubscriptions");
-    console.log(userSubscriptions);
-    console.log("userSubscriptions[0]");
-    console.log(userSubscriptions[0]);
-
     if (userSubscriptions.length)
-      WebPush.sendNotification(userSubscriptions[0], JSON.stringify(data));
+      WebPush.sendNotification(
+        userSubscriptions[userSubscriptions.length - 1],
+        JSON.stringify(data)
+      );
   } catch (error) {
     console.log("Web Notification Failed!");
     console.log(error);

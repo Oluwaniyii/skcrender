@@ -384,10 +384,6 @@ async function push(
     icon: string;
   }
 ) {
-  console.log("Pushing..");
-  console.log();
-  
-  
   await Push(to, data);
 }
 

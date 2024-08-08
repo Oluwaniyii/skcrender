@@ -3,10 +3,11 @@ import { createClient } from "redis";
 import logger from "../../utils/logger";
 
 export const client = createClient({
-  url: config.get("redis.connection_string")
+  url: config.get("redis.connection_string"),
+  pingInterval: 3000,
 });
 
-client.on("error", err => {
+client.on("error", (err) => {
   logger.error("redis connection error", err);
   process.exit(1);
 });
