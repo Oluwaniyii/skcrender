@@ -62,4 +62,4 @@ cloudinary.config({
 db();
 redisConnect();
 
-app.listen(PORT, () => console.log(`server started on http://${HOST}:${PORT}`));
+// app.listen(PORT, () => console.log(`server started on http://${HOST}:${PORT}`));
