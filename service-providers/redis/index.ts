@@ -3,8 +3,7 @@ import { createClient } from "redis";
 import logger from "../../utils/logger";
 
 export let client = createClient({
-  url: config.get("redis.connection_string"),
-  pingInterval: 3000,
+  url: config.get("redis.connection_string")
 });
 
 client.on("error", (err) => {
